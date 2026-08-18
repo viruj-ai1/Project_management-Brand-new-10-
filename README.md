@@ -1,4 +1,4 @@
-# Viruj Chematrix - Project Management Portal
+Project Management Portal
 
 A comprehensive and modern Project Management Portal developed by Viruj Chematrix. This application provides a unified interface for project tracking, task management, and data visualization.
 
