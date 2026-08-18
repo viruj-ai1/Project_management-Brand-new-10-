@@ -1,0 +1,15 @@
+{
+  "name": "project_management_portal",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "start": "python run.py",
+    "dev": "python run.py"
+  },
+  "dependencies": {
+    "pg": "^8.22.0"
+  }
+}

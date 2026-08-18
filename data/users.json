@@ -1,0 +1,79 @@
+[
+  {
+    "id": "u1",
+    "name": "Managing Director",
+    "role": "Managing Director",
+    "manager_id": null,
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  },
+  {
+    "id": "u2",
+    "name": "Vice President (R&D)",
+    "role": "Vice President (R&D)",
+    "manager_id": "u1",
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  },
+  {
+    "id": "u3",
+    "name": "Project Manager A",
+    "role": "Project Manager",
+    "manager_id": "u2",
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  },
+  {
+    "id": "u4",
+    "name": "Project Manager B",
+    "role": "Project Manager",
+    "manager_id": "u2",
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  },
+  {
+    "id": "u5",
+    "name": "ARD Head",
+    "role": "Department Head",
+    "manager_id": "u3",
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  },
+  {
+    "id": "u6",
+    "name": "CRD Head",
+    "role": "Department Head",
+    "manager_id": "u3",
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  },
+  {
+    "id": "u7",
+    "name": "DQA Head",
+    "role": "Department Head",
+    "manager_id": "u4",
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  },
+  {
+    "id": "u8",
+    "name": "SCM Head (RD)",
+    "role": "Department Head",
+    "manager_id": "u4",
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  },
+  {
+    "id": "u9",
+    "name": "Tech Transfer (TTR) Head",
+    "role": "Department Head",
+    "manager_id": "u4",
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  },
+  {
+    "id": "u10",
+    "name": "Senior Chemist (ARD)",
+    "role": "Analysts/Chemists",
+    "manager_id": "u5",
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  },
+  {
+    "id": "u11",
+    "name": "External Client",
+    "role": "Client",
+    "manager_id": null,
+    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+  }
+]

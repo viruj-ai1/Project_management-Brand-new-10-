@@ -1,0 +1,43 @@
+[
+  {
+    "id": "t1",
+    "title": "Method Development for Impurity Profiling",
+    "specs": "Develop reverse-phase HPLC method for degradation products.",
+    "assignedTo": "u10",
+    "projectId": "p1",
+    "predecessors": [],
+    "status": "In Progress",
+    "durationValue": 5.0,
+    "durationUnit": "days",
+    "finalTotalDays": 7,
+    "assignedDays": 5,
+    "bufferDays": 2,
+    "startedAt": "2026-08-10T09:00:00",
+    "completedAt": null,
+    "subtasks": [
+      {"id": "s1", "title": "Mobile Phase Preparation", "completed": true},
+      {"id": "s2", "title": "Column Selection & Equilibration", "completed": true},
+      {"id": "s3", "title": "Sample Injection Run #1", "completed": false}
+    ],
+    "prerequisitesChecklist": [
+      {"id": "p1", "title": "Raw Material Batch Received", "completed": true}
+    ]
+  },
+  {
+    "id": "t2",
+    "title": "Stability Testing at 40°C / 75% RH",
+    "specs": "Place batch samples in stability chamber for 3-month acceleration test.",
+    "assignedTo": "u10",
+    "projectId": "p1",
+    "predecessors": ["t1"],
+    "status": "Pending Start",
+    "durationValue": 10.0,
+    "durationUnit": "days",
+    "finalTotalDays": 12,
+    "assignedDays": 10,
+    "bufferDays": 2,
+    "subtasks": [
+      {"id": "s1", "title": "Chamber Temperature Calibration", "completed": false}
+    ]
+  }
+]

@@ -1,0 +1,36 @@
+[
+  {
+    "id": "p1",
+    "name": "Fosravuconazole Development",
+    "deadline": "2026-12-31",
+    "pmId": "u3",
+    "status": "Active",
+    "bufferPool": 10,
+    "description": "Antifungal drug candidate formulation and stability assessment.",
+    "category": "R&D",
+    "priority": "High",
+    "clientId": "u11",
+    "clientName": "External Client",
+    "businessCase": [
+      {"item": "Target Market Expansion", "status": "Approved"}
+    ],
+    "rmList": [
+      {"name": "Raw Compound A", "quantity": "500kg", "status": "Procured"}
+    ]
+  },
+  {
+    "id": "p2",
+    "name": "EZM Analytical Method Validation",
+    "deadline": "2026-10-15",
+    "pmId": "u4",
+    "status": "Active",
+    "bufferPool": 5,
+    "description": "High-Performance Liquid Chromatography (HPLC) analytical method validation.",
+    "category": "ARD",
+    "priority": "Medium",
+    "clientId": "u11",
+    "clientName": "External Client",
+    "businessCase": [],
+    "rmList": []
+  }
+]
