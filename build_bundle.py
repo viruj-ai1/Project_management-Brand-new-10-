@@ -49,6 +49,10 @@ def build_standalone_bundle():
                 js_content = js_content.replace('"/Logo.png"', f'"{rl_uri}"')
                 js_content = js_content.replace('Logo.png', rl_uri)
 
+        # Standardize backend URL from 5000 to 8000 / 127.0.0.1
+        js_content = js_content.replace('http://localhost:5000', 'http://127.0.0.1:8000')
+        js_content = js_content.replace('http://127.0.0.1:5000', 'http://127.0.0.1:8000')
+
         target_js = f'<script type="module" crossorigin src="/assets/{js_files[0]}"></script>'
         html = html.replace(target_js, f'<script type="module">\n{js_content}\n</script>')
 

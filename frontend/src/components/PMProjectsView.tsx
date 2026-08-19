@@ -287,8 +287,8 @@ const TaskDurationEditor = ({ task, updateTask, readOnly, projects, updateProjec
     const finalTotalDays = unit === 'weeks'
       ? calculateWorkingDaysFromWeeks(numericVal)
       : Math.round(numericVal);
-    const assignedDays = finalTotalDays <= 3 ? finalTotalDays : Math.ceil(finalTotalDays * 0.7);
-    const bufferDays = finalTotalDays <= 3 ? 0 : finalTotalDays - assignedDays;
+    const assignedDays = finalTotalDays <= 3 ? finalTotalDays : Math.round(finalTotalDays * 0.7 * 100) / 100;
+    const bufferDays = finalTotalDays <= 3 ? 0 : Math.round((finalTotalDays - assignedDays) * 100) / 100;
 
     updateTask(task.id, {
       durationValue: numericVal,
@@ -1103,8 +1103,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
             const stVal = parseFloat(st.durationValue) || 0;
             const stUnit = st.durationUnit || 'days';
             const stFinalTotalDays = stUnit === 'weeks' ? calculateWorkingDaysFromWeeks(stVal) : stVal;
-            const stAssignedDays = stFinalTotalDays <= 3 ? stFinalTotalDays : Math.ceil(stFinalTotalDays * 0.7);
-            const stBufferDays = stFinalTotalDays <= 3 ? 0 : stFinalTotalDays - stAssignedDays;
+            const stAssignedDays = stFinalTotalDays <= 3 ? stFinalTotalDays : Math.round(stFinalTotalDays * 0.7 * 100) / 100;
+            const stBufferDays = stFinalTotalDays <= 3 ? 0 : Math.round((stFinalTotalDays - stAssignedDays) * 100) / 100;
 
             parentFinalTotalDays += stFinalTotalDays;
             parentAssignedDays += stAssignedDays;
@@ -1130,8 +1130,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
             durationValue: parentFinalTotalDays, // Fallback representing total days
             durationUnit: 'days',
             finalTotalDays: parentFinalTotalDays,
-            assignedDays: parentAssignedDays,
-            plannedBufferDays: parentBufferDays,
+            assignedDays: Math.round(parentAssignedDays * 100) / 100,
+            plannedBufferDays: Math.round(parentBufferDays * 100) / 100,
             bufferDays: 0,
             subtasks: mappedSubtasks,
             prerequisitesChecklist: []
@@ -1140,8 +1140,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
           parentFinalVal = parseFloat(task.durationValue) || 1;
           parentUnit = task.durationUnit || 'days';
           parentFinalTotalDays = parentUnit === 'weeks' ? calculateWorkingDaysFromWeeks(parentFinalVal) : parentFinalVal;
-          parentAssignedDays = parentFinalTotalDays <= 3 ? parentFinalTotalDays : Math.ceil(parentFinalTotalDays * 0.7);
-          parentBufferDays = parentFinalTotalDays <= 3 ? 0 : parentFinalTotalDays - parentAssignedDays;
+          parentAssignedDays = parentFinalTotalDays <= 3 ? parentFinalTotalDays : Math.round(parentFinalTotalDays * 0.7 * 100) / 100;
+          parentBufferDays = parentFinalTotalDays <= 3 ? 0 : Math.round((parentFinalTotalDays - parentAssignedDays) * 100) / 100;
 
           totalNewBuffer += parentBufferDays;
 
@@ -1506,7 +1506,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                   const stVal = parseFloat(st.durationValue) || 0;
                                   const stUnit = st.durationUnit || 'days';
                                   const stFinal = stUnit === 'weeks' ? calculateWorkingDaysFromWeeks(stVal) : stVal;
-                                  return sum + (stFinal <= 3 ? stFinal : Math.ceil(stFinal * 0.7));
+                                  return sum + (stFinal <= 3 ? stFinal : Math.round(stFinal * 0.7 * 100) / 100);
                                 }, 0);
                                 return (
                                   <div className="w-full p-2.5 border border-gray-300 rounded-xl bg-gray-50 text-gray-700 text-xs font-bold flex justify-between shadow-inner">
@@ -1579,9 +1579,11 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                               const stVal = parseFloat(st.durationValue) || 0;
                               const stUnit = st.durationUnit || 'days';
                               const stFinal = stUnit === 'weeks' ? calculateWorkingDaysFromWeeks(stVal) : stVal;
-                              return sum + (stFinal <= 3 ? stFinal : Math.ceil(stFinal * 0.7));
+                              return sum + (stFinal <= 3 ? stFinal : Math.round(stFinal * 0.7 * 100) / 100);
                             }, 0);
-                            const bufferTotal = totalDays - assignedTotal;
+                            const bufferTotal = Math.round((totalDays - assignedTotal) * 100) / 100;
+                            const assignedPct = totalDays > 0 ? Math.round((assignedTotal / totalDays) * 100) : 70;
+                            const bufferPct = 100 - assignedPct;
 
                             return (
                               <div className="rounded-xl border p-3 mb-2 bg-blue-50 border-blue-200">
@@ -1594,8 +1596,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                   </span>
                                 </div>
                                 <div className="flex justify-between mt-1">
-                                  <span className="text-[10px] text-gray-600 font-bold">{assignedTotal}d Assigned Work (70%)</span>
-                                  <span className="text-[10px] text-gray-600 font-bold">{bufferTotal}d Buffer Generated (30%)</span>
+                                  <span className="text-[10px] text-gray-600 font-bold">{assignedTotal}d Assigned Work ({assignedPct}%)</span>
+                                  <span className="text-[10px] text-gray-600 font-bold">{bufferTotal}d Buffer Generated ({bufferPct}%)</span>
                                 </div>
                               </div>
                             );
@@ -2476,8 +2478,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                                                   let subTotal = subDays;
                                                                   let subBuffer = 0;
                                                                   if (subDays > 3) {
-                                                                    subTotal = Math.ceil(subDays / 0.7);
-                                                                    subBuffer = subTotal - subDays;
+                                                                    subTotal = Math.round((subDays / 0.7) * 100) / 100;
+                                                                    subBuffer = Math.round((subTotal - subDays) * 100) / 100;
                                                                   }
                                                                   parentFinalTotalDays += subTotal;
                                                                   parentPlannedBufferDays += subBuffer;

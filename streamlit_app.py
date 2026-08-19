@@ -33,25 +33,32 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Start Backend FastAPI server in background thread if not running
+# 3. Start Backend FastAPI server in background process if not running
 def start_fastapi_backend():
+    import socket
+    import subprocess
+    
     base_dir = os.path.dirname(os.path.abspath(__file__))
     backend_dir = os.path.join(base_dir, "backend")
     if backend_dir not in sys.path:
         sys.path.insert(0, backend_dir)
+        
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    is_open = (sock.connect_ex(('127.0.0.1', 8000)) == 0)
+    sock.close()
     
-    try:
-        import uvicorn
-        from main import app
-        uvicorn.run(app, host="127.0.0.1", port=5000, log_level="error")
-    except Exception as e:
-        print(f"Backend thread error or already running: {e}")
+    if not is_open:
+        print("Starting FastAPI backend server process on port 8000...")
+        subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"],
+            cwd=backend_dir
+        )
+        time.sleep(2)
 
 if "backend_started" not in st.session_state:
     st.session_state["backend_started"] = True
-    t = threading.Thread(target=start_fastapi_backend, daemon=True)
-    t.start()
-    time.sleep(1)
+    start_fastapi_backend()
 
 # 4. Ensure bundle.html is built
 bundle_path = os.path.join(os.path.dirname(__file__), "frontend", "dist", "bundle.html")
