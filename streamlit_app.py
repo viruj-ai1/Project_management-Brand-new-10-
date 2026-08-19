@@ -73,6 +73,21 @@ if not os.path.exists(bundle_path):
 if os.path.exists(bundle_path):
     with open(bundle_path, "r", encoding="utf-8") as f:
         html_content = f.read()
+
+    render_backend = "https://project-management-brand-new-10-1.onrender.com"
+    try:
+        if "BACKEND_URL" in st.secrets:
+            render_backend = st.secrets["BACKEND_URL"].rstrip("/api").rstrip("/")
+    except Exception:
+        pass
+
+    # Dynamically map local backend URLs in bundle HTML to the live Render backend
+    html_content = html_content.replace('http://127.0.0.1:8000', render_backend)
+    html_content = html_content.replace('http://127.0.0.1:5000', render_backend)
+    html_content = html_content.replace('http://localhost:8000', render_backend)
+    html_content = html_content.replace('http://localhost:5000', render_backend)
+
     components.html(html_content, height=1000, scrolling=True)
 else:
     st.error("Frontend build bundle not found. Please run 'npm run build' in the frontend directory.")
+
