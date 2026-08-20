@@ -868,6 +868,278 @@ export const useAllTaskDates = (tasks: any[], projects: any[]) => {
   }, [tasks, projects]);
 };
 
+
+const deepCloneAndModify = (tasksArray: any[], targetId: string, modifierFn: (task: any) => any): any[] => {
+  return tasksArray.map(task => {
+    if (String(task.id) === String(targetId)) {
+      return modifierFn(task);
+    }
+    if (task.subtasks && Array.isArray(task.subtasks)) {
+      const updatedSubtasks = deepCloneAndModify(task.subtasks, targetId, modifierFn);
+      if (updatedSubtasks !== task.subtasks) {
+        return { ...task, subtasks: updatedSubtasks };
+      }
+    }
+    return task;
+  });
+};
+
+const handleDeepUpdate = (tasks: any[], updateTask: any, topLevelTaskId: string, targetId: string, updates: any) => {
+  const topLevelTask = tasks.find((t: any) => String(t.id) === String(topLevelTaskId));
+  if (!topLevelTask) return;
+  const newTasks = deepCloneAndModify([topLevelTask], targetId, (task: any) => ({ ...task, ...updates }));
+  const updatedTopLevel = newTasks[0];
+  if (String(topLevelTaskId) === String(targetId)) {
+    updateTask(topLevelTaskId, updates);
+  } else {
+    updateTask(topLevelTaskId, { subtasks: updatedTopLevel.subtasks });
+  }
+};
+
+const RecursiveTaskRow = ({ st, task, stStart, stEnd, plannedStart, plannedEnd, depth, ctx }: any) => {
+  const {
+    readOnly, allProjectNodes, handleDeepUpdateFn, handleDeepDeleteFn,
+    expandedSubtaskId, setExpandedSubtaskId,
+    chainMap, assigneesMap, fmtDate, addWorkingDays,
+    proj, updateTask
+  } = ctx;
+
+  const stCompleted = st.completed;
+  const stStatus = stCompleted ? 'Completed' : (st.startedAt ? 'In Progress' : 'Pending Start');
+  
+  const isUnblocked = (() => {
+    if (stCompleted) return true;
+    if (!st.predecessors || st.predecessors.length === 0) return true;
+    const findNode = (nodes: any[], targetId: string): any => {
+       for(const n of nodes) {
+         if(String(n.id) === String(targetId)) return n;
+         if(n.subtasks) {
+           const found = findNode(n.subtasks, targetId);
+           if(found) return found;
+         }
+       }
+       return null;
+    };
+    return st.predecessors.every((predId: string) => {
+      const pred = findNode(task.subtasks || [], predId);
+      return !pred || pred.completed;
+    });
+  })();
+
+  const isExpandedSubtask = expandedSubtaskId === String(st.id);
+  const stAssignedDays = Number(st.days) || 1;
+  const stChainStatus = chainMap.get(String(st.id));
+  const stStatusBg = stStatus === 'Completed' ? 'bg-blue-50 text-[#1e3a5f]' :
+    stStatus === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+      'bg-gray-100 text-gray-500';
+
+  const assignees = assigneesMap(st.assignedTo);
+
+  return (
+    <div className={`pt-4 border-t border-gray-100 first:border-0 w-full`} style={{ marginLeft: `${depth > 1 ? 1.5 : 0}rem` }}>
+      <div className="flex flex-col md:flex-row gap-6 justify-between items-start w-full">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
+            <span className="font-bold text-gray-900 text-xs bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+              {st.title || 'Untitled Subtask'}
+            </span>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stStatusBg}`}>
+               <Activity className="w-2.5 h-2.5 inline mr-1" />{stStatus}
+             </span>
+             {!isUnblocked && !stCompleted && (
+               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                 Blocked
+               </span>
+             )}
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200 shadow-sm">
+              Subtask Depth {depth}
+            </span>
+            
+            {/* Edit Title Button */}
+            {!readOnly && (
+               <button
+                 onClick={() => {
+                   const newTitle = window.prompt("Edit Subtask Title", st.title);
+                   if (newTitle && newTitle.trim() !== "" && newTitle !== st.title) {
+                     handleDeepUpdateFn(task.id, st.id, { title: newTitle });
+                   }
+                 }}
+                 className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-[#3b82f6] px-1.5 py-1 rounded hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
+                 title="Edit subtask title"
+               >
+                 <Edit2 className="w-3 h-3" /> Edit
+               </button>
+            )}
+
+            {/* Add Subtask Button */}
+            {!readOnly && (
+               <button
+                 onClick={() => {
+                   const newSub = { id: Date.now().toString(), title: 'New Nested Subtask', days: 1, subtasks: [] };
+                   handleDeepUpdateFn(task.id, st.id, { subtasks: [...(st.subtasks||[]), newSub] });
+                 }}
+                 className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-green-500 px-1.5 py-1 rounded hover:bg-green-50 transition-colors border border-transparent hover:border-green-200"
+                 title="Add nested subtask"
+               >
+                 <Plus className="w-3 h-3" /> Add Subtask
+               </button>
+            )}
+            
+            {/* Delete Subtask Button */}
+            {!readOnly && (
+               <button
+                 onClick={() => {
+                   if(window.confirm("Delete this subtask and all its children?")) {
+                       handleDeepDeleteFn(task.id, st.id);
+                   }
+                 }}
+                 className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-red-500 px-1.5 py-1 rounded hover:bg-red-50 transition-colors border border-transparent hover:border-red-200 ml-auto"
+                 title="Delete subtask"
+               >
+                 <Trash2 className="w-3 h-3" /> Delete
+               </button>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap gap-4 mt-2 mb-2">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <UserSquare2 className="w-3.5 h-3.5 text-gray-400" />
+              <strong className="text-gray-700">
+                {assignees.length > 0 ? assignees.map((a: any) => a.name).join(', ') : 'Unknown'}
+              </strong>
+            </div>
+            <div className="flex flex-col gap-1 text-xs text-gray-500">
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                <span>Planned Start: <strong className="text-gray-700">{fmtDate(plannedStart)}</strong></span>
+                <span className="text-gray-300">•</span>
+                <span>Planned End: <strong className="text-gray-700">{fmtDate(plannedEnd)}</strong></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-blue-400" />
+                <span>Dynamic Start: <strong className="text-[#1e3a5f]">{fmtDate(stStart)}</strong></span>
+                <span className="text-gray-300">•</span>
+                <span>Dynamic End: <strong className="text-[#1e3a5f]">{fmtDate(stEnd)}</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right side panel */}
+        <div className="flex items-center gap-4 shrink-0 w-full md:w-auto">
+          <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-4 shadow-sm w-full sm:w-52 space-y-3 shrink-0">
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Duration
+            </div>
+            <div className="space-y-1.5 text-xs text-gray-600">
+              <div className="flex justify-between items-center font-bold">
+                <span>Assigned Days:</span>
+                {!readOnly ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min="1"
+                      className="w-12 p-1 border rounded text-xs text-center"
+                      defaultValue={st.days || 1}
+                      onBlur={(e) => {
+                        const newDays = parseFloat(e.target.value);
+                        if(newDays > 0 && newDays !== st.days) handleDeepUpdateFn(task.id, st.id, { days: newDays });
+                      }}
+                    />
+                    <span>Days</span>
+                  </div>
+                ) : (
+                  <span className="text-green-600">{stAssignedDays} Days</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setExpandedSubtaskId(isExpandedSubtask ? null : st.id.toString())}
+            className="p-2 text-gray-400 hover:text-[#3b82f6] hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100 self-center flex items-center justify-center"
+            title="Toggle Action Points & Daily Logs"
+          >
+            <ChevronDown className={`w-5 h-5 transition-transform ${isExpandedSubtask ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+      </div>
+      
+      {/* Expanded subtask details (Action Points + Daily Logs) */}
+      {isExpandedSubtask && (
+         <div className="mt-4 bg-gray-50/50 border border-gray-200 rounded-xl p-4 space-y-4 w-full">
+           <div>
+             <h4 className="font-bold text-xs text-gray-700 flex items-center gap-1.5 mb-2">
+               <Activity className="w-3.5 h-3.5 text-blue-400" /> Day-to-Day Reasoning
+             </h4>
+             {(() => {
+               const assignedDaysForLog = Number(st.days) || 1;
+               const logs = st.dailyLogs || [];
+               return (
+                 <div className="space-y-1.5">
+                   {Array.from({ length: assignedDaysForLog }).map((_, dayIdx) => {
+                     const isCompleted = st.dailyLogsCompleted?.[dayIdx];
+                     return (
+                       <div key={dayIdx} className="flex items-start gap-2">
+                         <button
+                           onClick={() => {
+                             if (readOnly) return;
+                             const newCompleted = st.dailyLogsCompleted ? [...st.dailyLogsCompleted] : [];
+                             newCompleted[dayIdx] = !newCompleted[dayIdx];
+                             handleDeepUpdateFn(task.id, st.id, { dailyLogsCompleted: newCompleted });
+                           }}
+                           disabled={readOnly}
+                           className={`w-6 h-6 rounded flex items-center justify-center font-bold text-[10px] shrink-0 transition-colors ${readOnly ? '' : 'cursor-pointer hover:opacity-80 shadow-sm'} ${isCompleted ? 'bg-green-500 text-white border border-green-600' : 'bg-blue-50 text-[#1e3a5f] border border-blue-200'}`}
+                         >
+                           D{dayIdx + 1}
+                         </button>
+                         <div className={`flex-1 bg-white border rounded p-1.5 text-[10px] min-h-[28px] transition-colors ${isCompleted ? 'border-green-200 bg-green-50/30 text-gray-700' : 'border-gray-200 text-gray-600'}`}>
+                           {logs[dayIdx] || <span className="italic text-gray-300">No update</span>}
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+               );
+             })()}
+           </div>
+         </div>
+      )}
+
+      {/* Recursive children rendering */}
+      {st.subtasks && st.subtasks.length > 0 && (
+         <div className="mt-4 space-y-6 ml-6 border-l-2 border-blue-100 pl-4 w-full">
+           {renderSubtasks(task, st.subtasks, stStart, plannedStart, ctx, depth + 1)}
+         </div>
+      )}
+    </div>
+  );
+};
+
+const renderSubtasks = (parentTask: any, subtasks: any[], startDyn: Date, startPlan: Date, ctx: any, depth: number) => {
+  let dStart = startDyn;
+  let pStart = startPlan;
+  return subtasks.map((st: any) => {
+    const stDays = st.days || 1;
+    const stStart = dStart;
+    const stEnd = ctx.addWorkingDays(stStart, stDays);
+    dStart = stEnd;
+
+    const plannedStart = pStart;
+    const plannedEnd = ctx.addWorkingDays(plannedStart, stDays);
+    pStart = plannedEnd;
+
+    return (
+      <RecursiveTaskRow 
+        key={st.id} st={st} task={parentTask} 
+        stStart={stStart} stEnd={stEnd} 
+        plannedStart={plannedStart} plannedEnd={plannedEnd} 
+        depth={depth} ctx={ctx} 
+      />
+    );
+  });
+};
+
 export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { initialProjectId?: string | null, onBack?: (() => void) | null }) => {
   const { currentUser, projects, tasks, addTasksBulk, updateTask, users, updateProject } = useContext(AppContext);
   const isBelowPM = currentUser.role === ROLES.DEPT_HEAD || currentUser.role === ROLES.EMPLOYEE;
@@ -893,6 +1165,23 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   const [subtaskTabs, setSubtaskTabs] = useState<Record<string, 'list' | 'chart'>>({});
   const [bufferAllocateTask, setBufferAllocateTask] = useState<any>(null);
   const [bufferDaysInput, setBufferDaysInput] = useState<string>('');
+
+  const handleDeepUpdateFn = (topLevelTaskId: string, targetId: string, updates: any) => {
+    handleDeepUpdate(tasks, updateTask, topLevelTaskId, targetId, updates);
+  };
+  const handleDeepDeleteFn = (topLevelTaskId: string, targetId: string) => {
+     const topLevelTask = tasks.find((t: any) => String(t.id) === String(topLevelTaskId));
+     if (!topLevelTask) return;
+     const removeNode = (list: any[]): any[] => {
+        return list.filter(t => String(t.id) !== String(targetId)).map(t => {
+           if(t.subtasks) return { ...t, subtasks: removeNode(t.subtasks) };
+           return t;
+        });
+     };
+     const updatedSubtasks = removeNode(topLevelTask.subtasks || []);
+     updateTask(topLevelTaskId, { subtasks: updatedSubtasks });
+  };
+
 
   const modifyPredecessorOfAny = (targetId: string, predId: string, isAdd: boolean) => {
     const taskMatch = tasks.find((t: any) => String(t.id) === String(targetId));
@@ -2299,336 +2588,27 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                     );
                                   })()}
 
+
                                   {/* ── Read-only Subtasks (PM view) ── */}
                                   {task.subtasks && task.subtasks.length > 0 && (() => {
                                     let currentDynamicStart = allTaskDates[task.id]?.start || new Date();
                                     let currentPlannedStart = allTaskDates[task.id]?.plannedStart || new Date();
-
+                                    const assigneesMap = (assignedTo: any) => users.filter((u: any) => Array.isArray(assignedTo) ? assignedTo.includes(u.id) : assignedTo === u.id);
+                                    
+                                    const ctx = {
+                                      readOnly, allProjectNodes, handleDeepUpdateFn, handleDeepDeleteFn,
+                                      expandedSubtaskId, setExpandedSubtaskId,
+                                      chainMap, assigneesMap, fmtDate, addWorkingDays,
+                                      proj, updateTask
+                                    };
+                                    
                                     return (
                                       <div className="mt-4 space-y-6 ml-6 border-l-2 border-blue-100 pl-4 w-full">
-                                        {task.subtasks.map((st: any) => {
-                                          const stDays = st.days || 1;
-                                          const stStart = currentDynamicStart;
-                                          const stEnd = addWorkingDays(stStart, stDays);
-                                          currentDynamicStart = stEnd;
-
-                                          const plannedStart = currentPlannedStart;
-                                          const plannedEnd = addWorkingDays(plannedStart, stDays);
-                                          currentPlannedStart = plannedEnd;
-
-                                          const stCompleted = st.completed;
-                                          const stStatus = stCompleted ? 'Completed' : (st.startedAt ? 'In Progress' : 'Pending Start');
-                                          
-                                          const isUnblocked = (() => {
-                                            if (stCompleted) return true;
-                                            if (!st.predecessors || st.predecessors.length === 0) return true;
-                                            return st.predecessors.every((predId: string) => {
-                                              const pred = task.subtasks.find((s: any) => String(s.id) === String(predId));
-                                              return !pred || pred.completed;
-                                            });
-                                          })();
-
-
-                                          // isExpandedSubtask
-                                          const isExpandedSubtask = expandedSubtaskId === st.id.toString();
-
-                                          // Duration Split metrics
-                                          const stAssignedDays = Number(st.days) || 1;
-
-                                          const stChainStatus = chainMap.get(String(st.id));
-
-                                          // subtask status badges colors
-                                          const stStatusBg = stStatus === 'Completed' ? 'bg-blue-50 text-[#1e3a5f]' :
-                                            stStatus === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                                              'bg-gray-100 text-gray-500';
-
-                                          return (
-                                            <div key={st.id} className="pt-4 border-t border-gray-100 first:border-0 w-full">
-                                              <div className="flex flex-col md:flex-row gap-6 justify-between items-start">
-                                                <div className="flex-1 min-w-0">
-                                                  <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
-                                                    <span className="font-bold text-gray-900 text-xs bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                                                      {st.title || 'Untitled Subtask'}
-                                                    </span>
-                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stStatusBg}`}>
-                                                       <Activity className="w-2.5 h-2.5 inline mr-1" />{stStatus}
-                                                     </span>
-                                                     {!isUnblocked && !stCompleted && (
-                                                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                                                         Blocked
-                                                       </span>
-                                                     )}
-                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200 shadow-sm">
-                                                      Subtask
-                                                    </span>
-                                                    {stChainStatus && (
-                                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm border ${stChainStatus === 'Critical' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-                                                        }`}>
-                                                        {stChainStatus} Chain
-                                                      </span>
-                                                    )}
-                                                  </div>
-
-
-
-                                                  <div className="flex flex-wrap gap-4 mt-2 mb-2">
-                                                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                      <UserSquare2 className="w-3.5 h-3.5 text-gray-400" />
-                                                      <strong className="text-gray-700">
-                                                        {assignees.length > 0 ? assignees.map((a: any) => a.name).join(', ') : 'Unknown'}
-                                                      </strong>
-                                                    </div>
-                                                    <div className="flex flex-col gap-1 text-xs text-gray-500">
-                                                      <div className="flex items-center gap-2">
-                                                        <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                                        <span>Planned Start: <strong className="text-gray-700">{fmtDate(plannedStart)}</strong></span>
-                                                        <span className="text-gray-300">•</span>
-                                                        <span>Planned End: <strong className="text-gray-700">{fmtDate(plannedEnd)}</strong></span>
-                                                      </div>
-                                                      <div className="flex items-center gap-2">
-                                                        <Clock className="w-3.5 h-3.5 text-blue-400" />
-                                                        <span>Dynamic Start: <strong className="text-[#1e3a5f]">{fmtDate(stStart)}</strong></span>
-                                                        <span className="text-gray-300">•</span>
-                                                        <span>Dynamic End: <strong className="text-[#1e3a5f]">{fmtDate(stEnd)}</strong></span>
-                                                      </div>
-                                                    </div>
-                                                  </div>
-
-                                                  {/* Subtask Dependencies UI */}
-                                                  <div className="mt-2 pt-2 border-t border-gray-100 space-y-2">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                      <span className="text-[10px] font-bold text-gray-500 uppercase">Predecessors:</span>
-                                                      {st.predecessors && st.predecessors.length > 0 ? (
-                                                        <div className="flex flex-wrap gap-1.5">
-                                                          {st.predecessors.map((predId: string) => {
-                                                            const predNode = allProjectNodes.find(n => String(n.id) === String(predId));
-                                                            return (
-                                                              <span key={predId} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-200 shadow-sm">
-                                                                {predNode ? predNode.title : 'Deleted Node'}
-                                                                {!readOnly && (
-                                                                  <button
-                                                                    type="button"
-                                                                    onClick={() => handleRemoveSubtaskPredecessor(st.id, predId)}
-                                                                    className="text-red-400 hover:text-red-600 font-bold ml-1 text-[10px]"
-                                                                  >
-                                                                    ×
-                                                                  </button>
-                                                                )}
-                                                              </span>
-                                                            );
-                                                          })}
-                                                        </div>
-                                                      ) : (
-                                                        <span className="text-[10px] text-gray-400 italic">None</span>
-                                                      )}
-
-                                                      {!readOnly && allProjectNodes.filter(n => n.projectId === proj.id && String(n.id) !== String(st.id) && !(st.predecessors || []).map(String).includes(String(n.id))).length > 0 && (
-                                                        <select
-                                                          className="p-1 text-[10px] border border-gray-200 rounded bg-white text-gray-600 outline-none focus:ring-1 focus:ring-blue-500 ml-auto cursor-pointer max-w-[120px]"
-                                                          value=""
-                                                          onChange={e => {
-                                                            if (e.target.value) handleAddSubtaskPredecessor(st.id, e.target.value);
-                                                          }}
-                                                        >
-                                                          <option value="">+ Add</option>
-                                                          {allProjectNodes
-                                                            .filter(n => n.projectId === proj.id && String(n.id) !== String(st.id) && !(st.predecessors || []).map(String).includes(String(n.id)))
-                                                            .map((n: any) => <option key={n.id} value={n.id}>{n.title}</option>)
-                                                          }
-                                                        </select>
-                                                      )}
-                                                    </div>
-
-                                                    {(() => {
-                                                      const successors = allProjectNodes.filter(n => n.predecessors.includes(String(st.id)));
-                                                      const eligibleSuccessors = allProjectNodes.filter(n =>
-                                                        n.projectId === proj.id && String(n.id) !== String(st.id) &&
-                                                        !n.predecessors.includes(String(st.id)) &&
-                                                        !(st.predecessors || []).map(String).includes(String(n.id))
-                                                      );
-
-                                                      return (
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                          <span className="text-[10px] font-bold text-gray-500 uppercase">Successors:</span>
-                                                          {successors.length > 0 ? (
-                                                            <div className="flex flex-wrap gap-1.5">
-                                                              {successors.map((succ: any) => (
-                                                                <span key={succ.id} className="inline-flex items-center gap-1 bg-blue-50 text-[#1e3a5f] text-[10px] font-bold px-2 py-0.5 rounded border border-blue-100 shadow-sm">
-                                                                  {succ.title}
-                                                                  {!readOnly && (
-                                                                    <button
-                                                                      type="button"
-                                                                      onClick={() => handleRemoveSubtaskSuccessor(st.id, succ.id)}
-                                                                      className="text-red-400 hover:text-red-600 font-bold ml-1 text-[10px]"
-                                                                    >
-                                                                      ×
-                                                                    </button>
-                                                                  )}
-                                                                </span>
-                                                              ))}
-                                                            </div>
-                                                          ) : (
-                                                            <span className="text-[10px] text-gray-400 italic">None</span>
-                                                          )}
-
-                                                          {!readOnly && eligibleSuccessors.length > 0 && (
-                                                            <select
-                                                              className="p-1 text-[10px] border border-gray-200 rounded bg-white text-gray-600 outline-none focus:ring-1 focus:ring-blue-500 ml-auto cursor-pointer max-w-[120px]"
-                                                              value=""
-                                                              onChange={e => {
-                                                                if (e.target.value) handleAddSubtaskSuccessor(st.id, e.target.value);
-                                                              }}
-                                                            >
-                                                              <option value="">+ Add</option>
-                                                              {eligibleSuccessors.map((n: any) => <option key={n.id} value={n.id}>{n.title}</option>)}
-                                                            </select>
-                                                          )}
-                                                        </div>
-                                                      );
-                                                    })()}
-                                                  </div>
-                                                </div>
-
-                                                {/* Right side panel - Duration Split & Arrow Toggle */}
-                                                <div className="flex items-center gap-4 shrink-0 w-full md:w-auto">
-                                                  <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-4 shadow-sm w-full sm:w-52 space-y-3 shrink-0">
-                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                      Duration
-                                                    </div>
-                                                    <div className="space-y-1.5 text-xs text-gray-600">
-                                                      <div className="flex justify-between items-center font-bold">
-                                                        <span>Assigned Days:</span>
-                                                        {!readOnly ? (
-                                                          <div className="flex items-center gap-1.5">
-                                                            <SubtaskDaysInput
-                                                              initialDays={st.days}
-                                                              onSave={(newDays) => {
-                                                                const updatedSubtasks = task.subtasks.map((subSt: any) => {
-                                                                  if (subSt.id === st.id) {
-                                                                    return { ...subSt, days: newDays };
-                                                                  }
-                                                                  return subSt;
-                                                                });
-
-                                                                let parentAssignedDays = 0;
-                                                                let parentFinalTotalDays = 0;
-                                                                let parentPlannedBufferDays = 0;
-
-                                                                updatedSubtasks.forEach((subSt: any) => {
-                                                                  const subDays = parseFloat(subSt.days) || 0;
-                                                                  parentAssignedDays += subDays;
-
-                                                                  let subTotal = subDays;
-                                                                  let subBuffer = 0;
-                                                                  if (subDays > 3) {
-                                                                    subTotal = Math.round((subDays / 0.7) * 100) / 100;
-                                                                    subBuffer = Math.round((subTotal - subDays) * 100) / 100;
-                                                                  }
-                                                                  parentFinalTotalDays += subTotal;
-                                                                  parentPlannedBufferDays += subBuffer;
-                                                                });
-
-                                                                updateTask(task.id, {
-                                                                  subtasks: updatedSubtasks,
-                                                                  assignedDays: parentAssignedDays,
-                                                                  finalTotalDays: parentFinalTotalDays,
-                                                                  plannedBufferDays: parentPlannedBufferDays
-                                                                });
-                                                              }}
-                                                            />
-                                                            <span>Days</span>
-                                                          </div>
-                                                        ) : (
-                                                          <span className="text-green-600">{stAssignedDays} Days</span>
-                                                        )}
-                                                      </div>
-                                                    </div>
-                                                  </div>
-
-                                                  <button
-                                                    onClick={() => setExpandedSubtaskId(isExpandedSubtask ? null : st.id.toString())}
-                                                    className="p-2 text-gray-400 hover:text-[#3b82f6] hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100 self-center flex items-center justify-center"
-                                                    title="Toggle Action Points & Daily Logs"
-                                                  >
-                                                    <ChevronDown className={`w-5 h-5 transition-transform ${isExpandedSubtask ? 'rotate-180' : ''}`} />
-                                                  </button>
-                                                </div>
-                                              </div>
-
-                                              {isExpandedSubtask && (
-                                                <div className="mt-4 bg-gray-50/50 border border-gray-200 rounded-xl p-4 space-y-4 w-full">
-                                                  {/* Action Points */}
-                                                  <div>
-                                                    <h4 className="font-bold text-xs text-gray-700 flex items-center gap-1.5 mb-2">
-                                                      <CheckSquare className="w-3.5 h-3.5 text-blue-400" /> Action Points
-                                                    </h4>
-                                                    {!st.actionPoints || st.actionPoints.length === 0 ? (
-                                                      <p className="text-[10px] text-gray-400 italic">No action points provided.</p>
-                                                    ) : (
-                                                      <div className="space-y-1.5">
-                                                        {st.actionPoints.map((ap: any, apIdx: number) => (
-                                                          <div key={apIdx} className="flex items-start gap-2 bg-white rounded p-2 border border-gray-200">
-                                                            <input type="checkbox" checked={ap.done || false} readOnly className="mt-0.5 w-3 h-3 text-[#3b82f6] rounded border-gray-300" />
-                                                            <span className={`text-[10px] ${ap.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>{ap.text || 'Empty action point'}</span>
-                                                          </div>
-                                                        ))}
-                                                      </div>
-                                                    )}
-                                                  </div>
-
-                                                  {/* Daily Log */}
-                                                  <div>
-                                                    <h4 className="font-bold text-xs text-gray-700 flex items-center gap-1.5 mb-2">
-                                                      <Activity className="w-3.5 h-3.5 text-blue-400" /> Day-to-Day Reasoning
-                                                    </h4>
-                                                    {(() => {
-                                                      const assignedDaysForLog = Number(st.days) || 1;
-                                                      const logs = st.dailyLogs || [];
-                                                      if (logs.length === 0 && !logs.some((l: string) => l)) {
-                                                        return <p className="text-[10px] text-gray-400 italic">No daily logs recorded yet.</p>;
-                                                      }
-                                                      return (
-                                                        <div className="space-y-1.5">
-                                                          {Array.from({ length: assignedDaysForLog }).map((_, dayIdx) => {
-                                                            const isCompleted = st.dailyLogsCompleted?.[dayIdx];
-                                                            return (
-                                                              <div key={dayIdx} className="flex items-start gap-2">
-                                                                <button
-                                                                  onClick={() => {
-                                                                    if (readOnly) return;
-                                                                    const newCompleted = st.dailyLogsCompleted ? [...st.dailyLogsCompleted] : [];
-                                                                    newCompleted[dayIdx] = !newCompleted[dayIdx];
-                                                                    const newSubtasks = task.subtasks.map((s: any) =>
-                                                                      s.id === st.id ? { ...s, dailyLogsCompleted: newCompleted } : s
-                                                                    );
-                                                                    updateTask(task.id, { subtasks: newSubtasks });
-                                                                  }}
-                                                                  disabled={readOnly}
-                                                                  className={`w-6 h-6 rounded flex items-center justify-center font-bold text-[10px] shrink-0 transition-colors ${readOnly ? '' : 'cursor-pointer hover:opacity-80 shadow-sm'} ${isCompleted ? 'bg-green-500 text-white border border-green-600' : 'bg-blue-50 text-[#1e3a5f] border border-blue-200'}`}
-                                                                  title={isCompleted ? "Mark as incomplete" : "Mark as completed"}
-                                                                >
-                                                                  D{dayIdx + 1}
-                                                                </button>
-                                                                <div className={`flex-1 bg-white border rounded p-1.5 text-[10px] min-h-[28px] transition-colors ${isCompleted ? 'border-green-200 bg-green-50/30 text-gray-700' : 'border-gray-200 text-gray-600'}`}>
-                                                                  {logs[dayIdx] || <span className="italic text-gray-300">No update</span>}
-                                                                </div>
-                                                              </div>
-                                                            );
-                                                          })}
-                                                        </div>
-                                                      );
-                                                    })()}
-                                                  </div>
-                                                </div>
-                                              )}
-                                            </div>
-                                          );
-                                        })}
+                                        {renderSubtasks(task, task.subtasks, currentDynamicStart, currentPlannedStart, ctx, 1)}
                                       </div>
                                     );
                                   })()}
                                 </div>
-
                                 {/* Right panel: duration editor */}
                                 <div className="flex-shrink-0 sm:min-w-[190px] w-full sm:w-auto">
                                   <TaskDurationEditor task={task} updateTask={updateTask} readOnly={readOnly} projects={projects} updateProject={updateProject} />
