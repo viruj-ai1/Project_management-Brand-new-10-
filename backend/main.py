@@ -42,74 +42,114 @@ class User(BaseModel):
     password: Optional[str] = None
 
 class Project(BaseModel):
-    name: str
-    deadline: str
-    pmId: str
+    id: Optional[str] = None
+    name: Optional[str] = "Untitled Project"
+    deadline: Optional[str] = ""
+    pmId: Optional[str] = ""
     description: Optional[str] = None
     category: Optional[str] = None
     priority: Optional[str] = None
-    businessCase: Optional[List[Dict[str, Any]]] = None
-    rmList: Optional[List[Dict[str, Any]]] = None
+    status: Optional[str] = "Planning"
+    bufferPool: Optional[Any] = 0
+    businessCase: Optional[Any] = None
+    rmList: Optional[Any] = None
     clientId: Optional[str] = None
     clientName: Optional[str] = None
 
-class Task(BaseModel):
-    title: str
-    specs: str
-    assignedTo: Any
-    projectId: str
-    predecessors: Optional[List[str]] = None
-    status: Optional[str] = None
-    durationValue: Optional[float] = None
-    durationUnit: Optional[str] = None
-    finalTotalDays: Optional[int] = None
-    assignedDays: Optional[int] = None
-    bufferDays: Optional[int] = None
-    subtasks: Optional[List[Dict[str, Any]]] = None
+    class Config:
+        extra = "allow"
 
-class TaskUpdate(BaseModel):
-    status: Optional[str] = None
+class Task(BaseModel):
+    id: Optional[str] = None
+    title: Optional[str] = "Untitled Task"
+    specs: Optional[str] = ""
     assignedTo: Optional[Any] = None
-    subtasks: Optional[List[Dict[str, Any]]] = None
-    estimatedDays: Optional[int] = None
+    projectId: Optional[str] = ""
+    predecessors: Optional[Any] = None
+    status: Optional[str] = None
+    durationValue: Optional[Any] = None
+    durationUnit: Optional[str] = None
+    finalTotalDays: Optional[Any] = None
+    assignedDays: Optional[Any] = None
+    bufferDays: Optional[Any] = None
+    subtasks: Optional[Any] = None
+    estimatedDays: Optional[Any] = None
     estimateUnit: Optional[str] = None
-    originalEstimate: Optional[float] = None
-    finalTotalDays: Optional[int] = None
-    assignedDays: Optional[int] = None
-    bufferDays: Optional[int] = None
-    predecessors: Optional[List[str]] = None
+    originalEstimate: Optional[Any] = None
     startedAt: Optional[str] = None
     completedAt: Optional[str] = None
     delegateRequestStatus: Optional[str] = None
     delegatedTo: Optional[str] = None
     delegateRequestedBy: Optional[str] = None
-    bufferRequestDays: Optional[int] = None
+    bufferRequestDays: Optional[Any] = None
     bufferRequestStatus: Optional[str] = None
-    durationValue: Optional[float] = None
-    durationUnit: Optional[str] = None
     delayJustification: Optional[str] = None
-    extensionDayLogs: Optional[List[Dict[str, Any]]] = None
-    taskDailyLogs: Optional[List[Dict[str, Any]]] = None
-    taskDailyLogsCompleted: Optional[int] = None
-    prerequisitesChecklist: Optional[List[Dict[str, Any]]] = None
+    extensionDayLogs: Optional[Any] = None
+    taskDailyLogs: Optional[Any] = None
+    taskDailyLogsCompleted: Optional[Any] = None
+    prerequisitesChecklist: Optional[Any] = None
+
+    class Config:
+        extra = "allow"
+
+class TaskUpdate(BaseModel):
+    id: Optional[str] = None
+    title: Optional[str] = None
+    specs: Optional[str] = None
+    assignedTo: Optional[Any] = None
+    projectId: Optional[str] = None
+    predecessors: Optional[Any] = None
+    status: Optional[str] = None
+    durationValue: Optional[Any] = None
+    durationUnit: Optional[str] = None
+    finalTotalDays: Optional[Any] = None
+    assignedDays: Optional[Any] = None
+    bufferDays: Optional[Any] = None
+    subtasks: Optional[Any] = None
+    estimatedDays: Optional[Any] = None
+    estimateUnit: Optional[str] = None
+    originalEstimate: Optional[Any] = None
+    startedAt: Optional[str] = None
+    completedAt: Optional[str] = None
+    delegateRequestStatus: Optional[str] = None
+    delegatedTo: Optional[str] = None
+    delegateRequestedBy: Optional[str] = None
+    bufferRequestDays: Optional[Any] = None
+    bufferRequestStatus: Optional[str] = None
+    delayJustification: Optional[str] = None
+    extensionDayLogs: Optional[Any] = None
+    taskDailyLogs: Optional[Any] = None
+    taskDailyLogsCompleted: Optional[Any] = None
+    prerequisitesChecklist: Optional[Any] = None
+
+    class Config:
+        extra = "allow"
 
 class ProjectUpdate(BaseModel):
-    bufferPool: Optional[int] = None
-    status: Optional[str] = None
-    description: Optional[str] = None
-    pmId: Optional[str] = None
+    id: Optional[str] = None
+    name: Optional[str] = None
     deadline: Optional[str] = None
+    pmId: Optional[str] = None
+    status: Optional[str] = None
+    bufferPool: Optional[Any] = None
+    description: Optional[str] = None
     category: Optional[str] = None
     priority: Optional[str] = None
-    businessCase: Optional[List[Dict[str, Any]]] = None
-    rmList: Optional[List[Dict[str, Any]]] = None
+    businessCase: Optional[Any] = None
+    rmList: Optional[Any] = None
     clientId: Optional[str] = None
     clientName: Optional[str] = None
+
+    class Config:
+        extra = "allow"
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
     managerId: Optional[str] = None
+
+    class Config:
+        extra = "allow"
 
 # Helper functions for Task mapping
 def map_db_task_to_frontend(t: dict) -> dict:
@@ -416,6 +456,21 @@ async def create_project(project: Project):
         return res
     raise HTTPException(status_code=500, detail="Failed to create project")
 
+PROJECT_VALID_COLUMNS = {
+    "name", "deadline", "pm_id", "status", "buffer_pool", 
+    "description", "category", "priority", "client_id", "client_name", 
+    "business_case", "rm_list"
+}
+
+TASK_VALID_COLUMNS = {
+    "id", "project_id", "title", "specs", "status", "assigned_to", 
+    "duration_value", "duration_unit", "estimated_days", "estimate_unit", 
+    "original_estimate", "final_total_days", "assigned_days", "started_at", 
+    "completed_at", "predecessors", "buffer_allocated", "buffer_consumed", 
+    "delay_justification", "task_daily_logs_completed", "subtasks", 
+    "task_daily_logs", "extension_day_logs", "prerequisites_checklist"
+}
+
 @app.put("/api/projects/{project_id}")
 async def update_project(project_id: str, update: ProjectUpdate):
     updates = update.dict(exclude_unset=True)
@@ -423,15 +478,16 @@ async def update_project(project_id: str, update: ProjectUpdate):
         res = fetch_one("SELECT * FROM public.projects WHERE id = %s;", (project_id,))
         if res:
             if res.get("deadline"):
-                res["deadline"] = res["deadline"].isoformat()
-            res["pmId"] = res.pop("pm_id")
-            res["bufferPool"] = res.pop("buffer_pool")
-            res["clientId"] = res.pop("client_id")
-            res["clientName"] = res.pop("client_name")
-            res["businessCase"] = res.pop("business_case")
-            res["rmList"] = res.pop("rm_list")
+                res["deadline"] = res["deadline"].isoformat() if hasattr(res["deadline"], "isoformat") else str(res["deadline"])
+            res["pmId"] = res.pop("pm_id", None)
+            res["bufferPool"] = res.pop("buffer_pool", None)
+            res["clientId"] = res.pop("client_id", None)
+            res["clientName"] = res.pop("client_name", None)
+            res["businessCase"] = res.pop("business_case", None)
+            res["rmList"] = res.pop("rm_list", None)
             return res
         raise HTTPException(status_code=404, detail="Project not found")
+
     set_clauses = []
     params = []
     key_mapping = {
@@ -442,13 +498,33 @@ async def update_project(project_id: str, update: ProjectUpdate):
         "businessCase": "business_case",
         "rmList": "rm_list"
     }
+
     for k, v in updates.items():
+        if k == "id":
+            continue
         db_key = key_mapping.get(k, k)
+        if db_key not in PROJECT_VALID_COLUMNS:
+            continue
         set_clauses.append(f"{db_key} = %s")
         if k in ["businessCase", "rmList"] and v is not None:
             params.append(Json(v))
         else:
             params.append(v)
+
+    if not set_clauses:
+        res = fetch_one("SELECT * FROM public.projects WHERE id = %s;", (project_id,))
+        if res:
+            if res.get("deadline"):
+                res["deadline"] = res["deadline"].isoformat() if hasattr(res["deadline"], "isoformat") else str(res["deadline"])
+            res["pmId"] = res.pop("pm_id", None)
+            res["bufferPool"] = res.pop("buffer_pool", None)
+            res["clientId"] = res.pop("client_id", None)
+            res["clientName"] = res.pop("client_name", None)
+            res["businessCase"] = res.pop("business_case", None)
+            res["rmList"] = res.pop("rm_list", None)
+            return res
+        raise HTTPException(status_code=404, detail="Project not found")
+
     params.append(project_id)
     query = f"""
         UPDATE public.projects
@@ -461,13 +537,13 @@ async def update_project(project_id: str, update: ProjectUpdate):
     res = execute_query(query, tuple(params), returning=True)
     if res:
         if res.get("deadline"):
-            res["deadline"] = res["deadline"].isoformat()
-        res["pmId"] = res.pop("pm_id")
-        res["bufferPool"] = res.pop("buffer_pool")
-        res["clientId"] = res.pop("client_id")
-        res["clientName"] = res.pop("client_name")
-        res["businessCase"] = res.pop("business_case")
-        res["rmList"] = res.pop("rm_list")
+            res["deadline"] = res["deadline"].isoformat() if hasattr(res["deadline"], "isoformat") else str(res["deadline"])
+        res["pmId"] = res.pop("pm_id", None)
+        res["bufferPool"] = res.pop("buffer_pool", None)
+        res["clientId"] = res.pop("client_id", None)
+        res["clientName"] = res.pop("client_name", None)
+        res["businessCase"] = res.pop("business_case", None)
+        res["rmList"] = res.pop("rm_list", None)
         return res
     raise HTTPException(status_code=404, detail="Project not found")
 
@@ -479,21 +555,26 @@ async def get_tasks():
 class BulkTasks(BaseModel):
     tasks: List[Task]
 
+    class Config:
+        extra = "allow"
+
 @app.post("/api/tasks")
 async def create_task(task: Task):
     new_task = task.dict()
-    new_task["id"] = f"t{int(time.time() * 1000)}"
+    if not new_task.get("id"):
+        new_task["id"] = f"t{int(time.time() * 1000)}"
     if not new_task.get("status"):
         new_task["status"] = "Approved (Work in Progress)"
     db_task = map_frontend_task_to_db(new_task)
-    columns = list(db_task.keys())
+    filtered_db_task = {k: v for k, v in db_task.items() if k in TASK_VALID_COLUMNS}
+    columns = list(filtered_db_task.keys())
     placeholders = [f"%s" for _ in columns]
     query = f"""
         INSERT INTO public.tasks ({', '.join(columns)})
         VALUES ({', '.join(placeholders)})
         RETURNING *;
     """
-    res = execute_query(query, tuple(db_task.values()), returning=True)
+    res = execute_query(query, tuple(filtered_db_task.values()), returning=True)
     if res:
         return map_db_task_to_frontend(res)
     raise HTTPException(status_code=500, detail="Failed to create task")
@@ -505,18 +586,20 @@ async def create_tasks_bulk(bulk: BulkTasks):
         base_time = int(time.time() * 1000)
         for idx, task in enumerate(bulk.tasks):
             new_task = task.dict()
-            new_task["id"] = f"t{base_time}_{idx}"
+            if not new_task.get("id"):
+                new_task["id"] = f"t{base_time}_{idx}"
             if not new_task.get("status"):
                 new_task["status"] = "Approved (Work in Progress)"
             db_task = map_frontend_task_to_db(new_task)
-            columns = list(db_task.keys())
+            filtered_db_task = {k: v for k, v in db_task.items() if k in TASK_VALID_COLUMNS}
+            columns = list(filtered_db_task.keys())
             placeholders = [f"%s" for _ in columns]
             query = f"""
                 INSERT INTO public.tasks ({', '.join(columns)})
                 VALUES ({', '.join(placeholders)})
                 RETURNING *;
             """
-            res = execute_query(query, tuple(db_task.values()), returning=True)
+            res = execute_query(query, tuple(filtered_db_task.values()), returning=True)
             if res:
                 created_tasks.append(map_db_task_to_frontend(res))
         return created_tasks
@@ -536,8 +619,17 @@ async def update_task(task_id: str, update: TaskUpdate):
     set_clauses = []
     params = []
     for k, v in db_task.items():
+        if k in ["id", "created_at", "updated_at"]:
+            continue
+        if k not in TASK_VALID_COLUMNS:
+            continue
         set_clauses.append(f"{k} = %s")
         params.append(v)
+    if not set_clauses:
+        res = fetch_one("SELECT * FROM public.tasks WHERE id = %s;", (task_id,))
+        if res:
+            return map_db_task_to_frontend(res)
+        raise HTTPException(status_code=404, detail="Task not found")
     params.append(task_id)
     query = f"""
         UPDATE public.tasks
@@ -778,4 +870,4 @@ Context:
 if __name__ == "__main__":
 
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
