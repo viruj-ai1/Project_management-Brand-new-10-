@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   FolderKanban, ChevronRight, ChevronDown, Clock, ShieldAlert, CheckSquare,
   Send, UserSquare2, Activity, AlertCircle, CheckCircle,
-  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles
+  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles, Edit2
 } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { TASK_STATUS, ROLES, computeDynamicBufferPool, addWorkingDays, isRestDay, getWorkingDaysElapsed } from '../constants';
@@ -1879,9 +1879,26 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                     <Card key={parentTitle} className="p-6 hover:border-gray-300 transition-all space-y-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-4">
                         <div className="flex-1">
-                          <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2 mb-2">
+                          <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2 mb-2 group">
                             <CheckSquare className="w-5 h-5 text-[#3b82f6]" />
                             {parentTitle}
+                            {!readOnly && (
+                              <button
+                                onClick={() => {
+                                  const newTitle = window.prompt("Edit Main Task Title", parentTitle);
+                                  if (newTitle && newTitle.trim() !== "" && newTitle !== parentTitle) {
+                                    subtasksList.forEach((t: any) => {
+                                      const suffix = t.title.substring(parentTitle.length);
+                                      updateTask(t.id, { title: newTitle + suffix });
+                                    });
+                                  }
+                                }}
+                                className="flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-[#3b82f6] ml-2 px-2 py-1 rounded-md hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
+                                title="Edit title"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" /> Edit
+                              </button>
+                            )}
                           </h4>
                           <div className="flex flex-col gap-2 mt-2">
                             <div className="flex items-center gap-3">
@@ -1947,9 +1964,26 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                               <div key={task.id} className="pt-5 first:pt-0 flex flex-col md:flex-row gap-6 justify-between items-start w-full">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
-                                    <span className="font-bold text-gray-900 text-xs bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                                      {displayTitle}
-                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-bold text-gray-900 text-xs bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                        {displayTitle}
+                                      </span>
+                                      {!readOnly && (
+                                        <button
+                                          onClick={() => {
+                                            const newTitle = window.prompt("Edit Subtask Title", displayTitle);
+                                            if (newTitle && newTitle.trim() !== "" && newTitle !== displayTitle) {
+                                              const newFullTitle = newTitle === 'Main Task' ? parentTitle : `${parentTitle} — ${newTitle}`;
+                                              updateTask(task.id, { title: newFullTitle });
+                                            }
+                                          }}
+                                          className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-[#3b82f6] px-1.5 py-1 rounded hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
+                                          title="Edit subtask title"
+                                        >
+                                          <Edit2 className="w-3 h-3" /> Edit
+                                        </button>
+                                      )}
+                                    </div>
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${task.status === 'Completed' ? 'bg-green-100 text-green-700' :
                                         task.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
                                           task.status === 'Delayed' ? 'bg-red-100 text-red-700' :
