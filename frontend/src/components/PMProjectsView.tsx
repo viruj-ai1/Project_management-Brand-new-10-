@@ -3337,9 +3337,9 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
   const BAR_COLOR = {
     completed: { bar: 'bg-emerald-500', text: 'Completed', dot: 'bg-emerald-500' },
     safe: { bar: 'bg-blue-500', text: 'Safe', dot: 'bg-blue-500' },
-    alert: { bar: 'bg-yellow-400', text: 'Alert', dot: 'bg-yellow-400' },
-    critical: { bar: 'bg-red-500', text: 'Critical', dot: 'bg-red-500' },
-    delayed: { bar: 'bg-red-500', text: 'Delayed', dot: 'bg-red-500' },
+    alert: { bar: 'bg-[#F59E0B]', text: 'Alert', dot: 'bg-[#F59E0B]' },
+    critical: { bar: 'bg-[#DC2626]', text: 'Critical', dot: 'bg-[#DC2626]' },
+    delayed: { bar: 'bg-[#DC2626]', text: 'Delayed', dot: 'bg-[#DC2626]' },
   };
 
   const getBarStyle = (d: typeof taskData[0]) => {
@@ -3378,6 +3378,10 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
               <span className="text-gray-600">{cfg.text}</span>
             </span>
           ))}
+          <span className="flex items-center gap-1.5 ml-2 border-l pl-3 border-gray-200">
+            <span className="w-4 h-1.5 rounded-full bg-gray-500 opacity-80" />
+            <span className="text-gray-600">Planned Schedule</span>
+          </span>
         </div>
       </div>
 
@@ -3442,8 +3446,8 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                     {/* Task label */}
                     <div className="w-48 flex-shrink-0 pr-4 pl-4 py-2 border-r border-gray-400 flex flex-col justify-center">
                       <div className="text-xs font-bold text-gray-900 truncate flex items-center gap-1.5" title={task.title}>
-                        {d.isCritical && <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
-                        {d.isAlert && <AlertCircle className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />}
+                        {d.isCritical && <AlertTriangle className="w-3.5 h-3.5 text-[#DC2626] flex-shrink-0" />}
+                        {d.isAlert && <AlertCircle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0" />}
                         <span className="truncate">{task.title}</span>
                       </div>
                       {!isClientView && <div className="text-[10px] text-gray-500 truncate" title={assigneeNames}>{assigneeNames}</div>}
@@ -3563,8 +3567,8 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
         <div className="relative w-full h-5 rounded-full overflow-hidden flex">
           {/* Coloured zone segments */}
           <div className="h-full bg-green-300" style={{ width: '65%' }} title="Safe 0–65%" />
-          <div className="h-full bg-yellow-200" style={{ width: '25%' }} title="Alert 65–90%" />
-          <div className="h-full bg-red-300" style={{ width: '10%' }} title="Critical >90%" />
+          <div className="h-full bg-[#F59E0B]/80" style={{ width: '25%' }} title="Alert 65–90%" />
+          <div className="h-full bg-[#DC2626]/80" style={{ width: '10%' }} title="Critical >90%" />
         </div>
         <div className="relative w-full">
           {/* Overall project progress marker */}
@@ -3577,7 +3581,7 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
             const completedCount = taskData.filter(d => d.isCompleted).length;
             const delayedCount = taskData.filter(d => d.isDelayed).length;
             const label = delayedCount > 0 ? 'Behind Schedule' : projPct > 90 ? 'Critical' : projPct > 65 ? 'Alert' : 'On/Ahead of Schedule';
-            const labelColor = delayedCount > 0 ? 'bg-red-500' : projPct > 90 ? 'bg-red-500' : projPct > 65 ? 'bg-yellow-500' : 'bg-green-500';
+            const labelColor = delayedCount > 0 ? 'bg-[#DC2626]' : projPct > 90 ? 'bg-[#DC2626]' : projPct > 65 ? 'bg-[#F59E0B]' : 'bg-green-500';
             return (
               <>
                 <div
@@ -3591,9 +3595,9 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                 <div className="flex items-center justify-between mt-6">
                   <div className="flex flex-wrap gap-3 text-[11px] font-semibold">
                     <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500" />Safe (0–65%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />Alert (65–90%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />Critical (&gt;90%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />Delayed</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />Alert (65–90%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />Critical (&gt;90%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />Delayed</span>
                   </div>
                   <span className={`text-[11px] font-black text-white px-3 py-1 rounded-full shadow-sm ${labelColor}`}>
                     {label}
