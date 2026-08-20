@@ -3335,10 +3335,10 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
   const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
   const BAR_COLOR = {
-    completed: { bar: 'bg-emerald-500', text: 'Completed', dot: 'bg-emerald-500' },
-    safe: { bar: 'bg-blue-500', text: 'Safe', dot: 'bg-blue-500' },
+    completed: { bar: 'bg-[#10B981]', text: 'Completed', dot: 'bg-[#10B981]' },
+    safe: { bar: 'bg-[#2563EB]', text: 'Safe', dot: 'bg-[#2563EB]' },
     alert: { bar: 'bg-[#F59E0B]', text: 'Alert', dot: 'bg-[#F59E0B]' },
-    critical: { bar: 'bg-[#DC2626]', text: 'Critical', dot: 'bg-[#DC2626]' },
+    critical: { bar: 'bg-[#7C3AED]', text: 'Critical', dot: 'bg-[#7C3AED]' },
     delayed: { bar: 'bg-[#DC2626]', text: 'Delayed', dot: 'bg-[#DC2626]' },
   };
 
@@ -3379,7 +3379,7 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
             </span>
           ))}
           <span className="flex items-center gap-1.5 ml-2 border-l pl-3 border-gray-200">
-            <span className="w-4 h-1.5 rounded-full bg-gray-500 opacity-80" />
+            <span className="w-4 h-1.5 rounded-full bg-[#64748B] opacity-80" />
             <span className="text-gray-600">Planned Schedule</span>
           </span>
         </div>
@@ -3446,7 +3446,7 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                     {/* Task label */}
                     <div className="w-48 flex-shrink-0 pr-4 pl-4 py-2 border-r border-gray-400 flex flex-col justify-center">
                       <div className="text-xs font-bold text-gray-900 truncate flex items-center gap-1.5" title={task.title}>
-                        {d.isCritical && <AlertTriangle className="w-3.5 h-3.5 text-[#DC2626] flex-shrink-0" />}
+                        {d.isCritical && <AlertTriangle className="w-3.5 h-3.5 text-[#7C3AED] flex-shrink-0" />}
                         {d.isAlert && <AlertCircle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0" />}
                         <span className="truncate">{task.title}</span>
                       </div>
@@ -3514,7 +3514,7 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                       {/* Bottom Bar: Planned Duration (Grey) */}
                       {plannedStart && plannedEnd && dateToPercent(plannedStart) <= 100 && (
                         <div
-                          className="absolute bottom-1.5 h-2.5 rounded-full shadow-sm bg-gray-500 opacity-80"
+                          className="absolute bottom-1.5 h-2.5 rounded-full shadow-sm bg-[#64748B] opacity-80"
                           style={{
                             left: `${dateToPercent(plannedStart)}%`,
                             width: `${Math.max(0.5, dateToPercent(plannedEnd) - dateToPercent(plannedStart))}%`
@@ -3566,9 +3566,9 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
         <p className="text-[11px] text-gray-500">Industry-standard colour coding comparing time elapsed against task duration.</p>
         <div className="relative w-full h-5 rounded-full overflow-hidden flex">
           {/* Coloured zone segments */}
-          <div className="h-full bg-green-300" style={{ width: '65%' }} title="Safe 0–65%" />
+          <div className="h-full bg-[#2563EB]/80" style={{ width: '65%' }} title="Safe 0–65%" />
           <div className="h-full bg-[#F59E0B]/80" style={{ width: '25%' }} title="Alert 65–90%" />
-          <div className="h-full bg-[#DC2626]/80" style={{ width: '10%' }} title="Critical >90%" />
+          <div className="h-full bg-[#7C3AED]/80" style={{ width: '10%' }} title="Critical >90%" />
         </div>
         <div className="relative w-full">
           {/* Overall project progress marker */}
@@ -3581,7 +3581,7 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
             const completedCount = taskData.filter(d => d.isCompleted).length;
             const delayedCount = taskData.filter(d => d.isDelayed).length;
             const label = delayedCount > 0 ? 'Behind Schedule' : projPct > 90 ? 'Critical' : projPct > 65 ? 'Alert' : 'On/Ahead of Schedule';
-            const labelColor = delayedCount > 0 ? 'bg-[#DC2626]' : projPct > 90 ? 'bg-[#DC2626]' : projPct > 65 ? 'bg-[#F59E0B]' : 'bg-green-500';
+            const labelColor = delayedCount > 0 ? 'bg-[#DC2626]' : projPct > 90 ? 'bg-[#7C3AED]' : projPct > 65 ? 'bg-[#F59E0B]' : 'bg-[#2563EB]';
             return (
               <>
                 <div
@@ -3594,9 +3594,9 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                 </div>
                 <div className="flex items-center justify-between mt-6">
                   <div className="flex flex-wrap gap-3 text-[11px] font-semibold">
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500" />Safe (0–65%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#2563EB]" />Safe (0–65%)</span>
                     <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />Alert (65–90%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />Critical (&gt;90%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#7C3AED]" />Critical (&gt;90%)</span>
                     <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />Delayed</span>
                   </div>
                   <span className={`text-[11px] font-black text-white px-3 py-1 rounded-full shadow-sm ${labelColor}`}>
