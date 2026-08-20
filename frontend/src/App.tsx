@@ -70,37 +70,44 @@ const MainApp = () => {
   const bellRef = useRef<HTMLDivElement>(null);
 
   const navigate = (tab: string, projectId: string | null = null) => {
-    if (activeTab !== tab || selectedDashboardProjectId !== projectId) {
-      // Push state to the browser history, holding all required UI state
-      window.history.pushState({ tab, projectId }, '', `#${tab}${projectId ? `?project=${projectId}` : ''}`);
-    }
     setActiveTabState(tab);
     setSelectedDashboardProjectId(projectId);
+    
+    try {
+      const newHash = `#${tab}${projectId ? `?project=${projectId}` : ''}`;
+      if (window.location.hash !== newHash) {
+        window.location.hash = newHash;
+      }
+    } catch (e) {
+      console.warn("Could not update window hash in iframe:", e);
+    }
   };
 
   const setActiveTab = (tab: string) => navigate(tab, null);
 
   useEffect(() => {
-    // Initial state push so the first popstate has something to go back to
-    window.history.replaceState({ tab: activeTab, projectId: selectedDashboardProjectId }, '', `#${activeTab}${selectedDashboardProjectId ? `?project=${selectedDashboardProjectId}` : ''}`);
-
-    const handlePopState = (e: PopStateEvent) => {
-      // When the user clicks the browser back button, restore the complete page stack
-      if (e.state && e.state.tab) {
-        setActiveTabState(e.state.tab);
-        setSelectedDashboardProjectId(e.state.projectId || null);
-      } else {
+    const handleHashChange = () => {
+      try {
         const hash = window.location.hash.replace('#', '').split('?')[0];
-        if (hash) {
+        if (hash && hash !== activeTab) {
            setActiveTabState(hash);
-           setSelectedDashboardProjectId(null);
+           
+           // parse project
+           const fullHash = window.location.hash;
+           if (fullHash.includes('?project=')) {
+             setSelectedDashboardProjectId(fullHash.split('?project=')[1].split('&')[0]);
+           } else {
+             setSelectedDashboardProjectId(null);
+           }
         }
+      } catch (e) {
+        // Ignore cross-origin errors
       }
     };
     
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [activeTab]);
 
   // Prevent accidental application exit from browser back button
   useEffect(() => {
