@@ -3165,27 +3165,91 @@ const ProjectDependencyChart = ({ projTasks }: { projTasks: any[] }) => {
   );
 };
 
+interface RMItem {
+  name: string;
+  casNumber: string;
+  remarks: string;
+}
+
+interface RMStage {
+  id: string;
+  stageName: string;
+  materials: RMItem[];
+}
+
 const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) => {
-  const [data, setData] = useState<any[]>(proj.rmList?.length ? proj.rmList : [{ name: '', casNumber: '', remarks: '' }]);
+  const [stages, setStages] = useState<RMStage[]>(() => {
+    const rawList = proj.rmList;
+    if (!rawList || rawList.length === 0) {
+      return [{ id: 'stage-' + Date.now(), stageName: 'Stage 1', materials: [{ name: '', casNumber: '', remarks: '' }] }];
+    }
+    // Check if it's already using the new structure
+    if (rawList[0].stageName !== undefined && Array.isArray(rawList[0].materials)) {
+      return rawList;
+    }
+    // Otherwise, it's the old flat structure, migrate it
+    return [{ id: 'stage-default', stageName: 'General Materials', materials: rawList }];
+  });
 
-  const updateCell = (rowIndex: number, colName: string, val: string) => {
-    const newData = [...data];
-    newData[rowIndex] = { ...newData[rowIndex], [colName]: val };
-    setData(newData);
+  const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({});
+  const [editingStageId, setEditingStageId] = useState<string | null>(null);
+
+  const toggleExpand = (stageId: string) => {
+    setExpandedStages(prev => ({ ...prev, [stageId]: prev[stageId] === false ? true : false }));
   };
 
-  const addRow = () => {
-    setData([...data, { name: '', casNumber: '', remarks: '' }]);
+  const addStage = () => {
+    const newStage: RMStage = {
+      id: 'stage-' + Date.now(),
+      stageName: `Stage ${stages.length + 1}`,
+      materials: [{ name: '', casNumber: '', remarks: '' }]
+    };
+    setStages([...stages, newStage]);
+    setEditingStageId(newStage.id); // Automatically focus the new stage name for editing
   };
 
-  const removeRow = (index: number) => {
+  const removeStage = (stageId: string) => {
+    if (!confirm(`Are you sure you want to delete this entire stage and all its materials?`)) return;
+    setStages(stages.filter(s => s.id !== stageId));
+  };
+
+  const updateStageName = (stageId: string, newName: string) => {
+    setStages(stages.map(s => s.id === stageId ? { ...s, stageName: newName } : s));
+  };
+
+  const addRow = (stageId: string) => {
+    setStages(stages.map(s => {
+      if (s.id === stageId) {
+        return { ...s, materials: [...s.materials, { name: '', casNumber: '', remarks: '' }] };
+      }
+      return s;
+    }));
+  };
+
+  const removeRow = (stageId: string, index: number) => {
     if (!confirm(`Are you sure you want to delete Raw Material at row ${index + 1}?`)) return;
-    const newData = data.filter((_, i) => i !== index);
-    setData(newData.length ? newData : [{ name: '', casNumber: '', remarks: '' }]);
+    setStages(stages.map(s => {
+      if (s.id === stageId) {
+        const newMaterials = s.materials.filter((_, i) => i !== index);
+        return { ...s, materials: newMaterials.length ? newMaterials : [{ name: '', casNumber: '', remarks: '' }] };
+      }
+      return s;
+    }));
+  };
+
+  const updateCell = (stageId: string, rowIndex: number, colName: keyof RMItem, val: string) => {
+    setStages(stages.map(s => {
+      if (s.id === stageId) {
+        const newMaterials = [...s.materials];
+        newMaterials[rowIndex] = { ...newMaterials[rowIndex], [colName]: val };
+        return { ...s, materials: newMaterials };
+      }
+      return s;
+    }));
   };
 
   const save = () => {
-    updateProject(proj.id, { rmList: data });
+    updateProject(proj.id, { rmList: stages });
     alert("Saved Raw Material list successfully!");
   };
 
@@ -3197,10 +3261,10 @@ const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) =
         </h3>
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={addRow}
-            className="bg-blue-50 hover:bg-blue-50 text-[#1e3a5f] px-3.5 py-1.5 rounded-lg text-xs font-bold border border-blue-200 transition-all flex items-center gap-1.5"
+            onClick={addStage}
+            className="bg-blue-50 hover:bg-blue-100 text-[#1e3a5f] px-3.5 py-1.5 rounded-lg text-xs font-bold border border-blue-200 transition-all flex items-center gap-1.5"
           >
-            <Plus className="w-4 h-4" /> Add Row
+            <Plus className="w-4 h-4" /> Add Stage
           </button>
           <button
             onClick={save}
@@ -3210,60 +3274,134 @@ const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) =
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto border border-gray-200 rounded-xl">
-        <table className="w-full text-left text-sm whitespace-nowrap">
-          <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold">
-            <tr>
-              <th className="p-3.5 border-r border-gray-200 w-16 text-center">S.No.</th>
-              <th className="p-3.5 border-r border-gray-200 min-w-[250px]">Name of the Raw material</th>
-              <th className="p-3.5 border-r border-gray-200 min-w-[180px]">CAS Number</th>
-              <th className="p-3.5 border-r border-gray-200 min-w-[280px]">Remarks</th>
-              <th className="p-3.5 w-16 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, rowIndex) => (
-              <tr key={rowIndex} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/30 transition-colors">
-                <td className="p-3.5 font-semibold text-gray-600 bg-gray-50 border-r border-gray-200 text-center w-16">
-                  {rowIndex + 1}
-                </td>
-                <td className="p-1 border-r border-gray-100 min-w-[250px]">
-                  <input
-                    className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
-                    placeholder="Enter name of raw material..."
-                    value={row.name || ''}
-                    onChange={e => updateCell(rowIndex, 'name', e.target.value)}
-                  />
-                </td>
-                <td className="p-1 border-r border-gray-100 min-w-[180px]">
-                  <input
-                    className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
-                    placeholder="e.g. 103-90-2"
-                    value={row.casNumber || ''}
-                    onChange={e => updateCell(rowIndex, 'casNumber', e.target.value)}
-                  />
-                </td>
-                <td className="p-1 border-r border-gray-100 min-w-[280px]">
-                  <input
-                    className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
-                    placeholder="Enter remarks..."
-                    value={row.remarks || ''}
-                    onChange={e => updateCell(rowIndex, 'remarks', e.target.value)}
-                  />
-                </td>
-                <td className="p-1 text-center w-16">
+
+      <div className="space-y-4 mt-4">
+        {stages.map((stage, stageIdx) => {
+          const isCollapsed = expandedStages[stage.id] === false;
+
+          return (
+            <div key={stage.id} className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+              {/* Stage Header */}
+              <div className="bg-gray-50 border-b border-gray-200 p-3 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <button onClick={() => toggleExpand(stage.id)} className="text-gray-500 hover:text-gray-800 transition-colors p-1 rounded-md hover:bg-gray-200">
+                    {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  </button>
+                  
+                  {editingStageId === stage.id ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      className="px-2 py-1 text-sm font-bold text-gray-900 bg-white border border-blue-400 rounded outline-none focus:ring-2 focus:ring-blue-100 w-64"
+                      value={stage.stageName}
+                      onChange={(e) => updateStageName(stage.id, e.target.value)}
+                      onBlur={() => setEditingStageId(null)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') setEditingStageId(null); }}
+                    />
+                  ) : (
+                    <h4 
+                      className="text-sm font-bold text-gray-900 flex items-center gap-2 cursor-pointer group"
+                      onClick={() => setEditingStageId(stage.id)}
+                      title="Click to edit stage name"
+                    >
+                      {stage.stageName}
+                      <Edit2 className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </h4>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => removeRow(rowIndex)}
-                    className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50"
-                    title="Delete Row"
+                    onClick={() => addRow(stage.id)}
+                    className="text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Material
+                  </button>
+                  <button
+                    onClick={() => removeStage(stage.id)}
+                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors"
+                    title="Delete Stage"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+
+              {/* Stage Body */}
+              {!isCollapsed && (
+                <div className="overflow-x-auto bg-white">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-gray-50/50 border-b border-gray-200 text-gray-500 font-semibold text-xs uppercase tracking-wider">
+                      <tr>
+                        <th className="p-3 border-r border-gray-200 w-16 text-center">S.No.</th>
+                        <th className="p-3 border-r border-gray-200 min-w-[250px]">Name of the Raw material</th>
+                        <th className="p-3 border-r border-gray-200 min-w-[180px]">CAS Number</th>
+                        <th className="p-3 border-r border-gray-200 min-w-[280px]">Remarks</th>
+                        <th className="p-3 w-16 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stage.materials.map((row, rowIndex) => (
+                        <tr key={rowIndex} className="border-b border-gray-100 last:border-0 hover:bg-blue-50/20 transition-colors">
+                          <td className="p-3 font-semibold text-gray-500 bg-gray-50/30 border-r border-gray-200 text-center w-16 text-xs">
+                            {rowIndex + 1}
+                          </td>
+                          <td className="p-1 border-r border-gray-100 min-w-[250px]">
+                            <input
+                              className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
+                              placeholder="Enter name of raw material..."
+                              value={row.name || ''}
+                              onChange={e => updateCell(stage.id, rowIndex, 'name', e.target.value)}
+                            />
+                          </td>
+                          <td className="p-1 border-r border-gray-100 min-w-[180px]">
+                            <input
+                              className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
+                              placeholder="e.g. 103-90-2"
+                              value={row.casNumber || ''}
+                              onChange={e => updateCell(stage.id, rowIndex, 'casNumber', e.target.value)}
+                            />
+                          </td>
+                          <td className="p-1 border-r border-gray-100 min-w-[280px]">
+                            <input
+                              className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
+                              placeholder="Enter remarks..."
+                              value={row.remarks || ''}
+                              onChange={e => updateCell(stage.id, rowIndex, 'remarks', e.target.value)}
+                            />
+                          </td>
+                          <td className="p-1 text-center w-16">
+                            <button
+                              onClick={() => removeRow(stage.id, rowIndex)}
+                              className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50"
+                              title="Delete Row"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {stage.materials.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="p-4 text-center text-sm text-gray-500 italic">
+                            No materials in this stage.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {stages.length === 0 && (
+          <div className="text-center py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+            <FolderKanban className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-500 font-medium">No stages created yet</p>
+            <p className="text-xs text-gray-400 mt-1">Click "Add Stage" to get started</p>
+          </div>
+        )}
       </div>
     </Card>
   );
