@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   FolderKanban, ChevronRight, ChevronDown, Clock, ShieldAlert, CheckSquare,
   Send, UserSquare2, Activity, AlertCircle, CheckCircle,
-  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles, Edit2
+  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles, Edit2, Share2
 } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { TASK_STATUS, ROLES, computeDynamicBufferPool, addWorkingDays, isRestDay, getWorkingDaysElapsed } from '../constants';
@@ -1165,6 +1165,9 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   const [subtaskTabs, setSubtaskTabs] = useState<Record<string, 'list' | 'chart'>>({});
   const [bufferAllocateTask, setBufferAllocateTask] = useState<any>(null);
   const [bufferDaysInput, setBufferDaysInput] = useState<string>('');
+
+  const [addingSubtaskFor, setAddingSubtaskFor] = useState<string | null>(null);
+  const [newSubtaskForm, setNewSubtaskForm] = useState({ title: '', assignees: [] as string[], days: 1 });
 
   const handleDeepUpdateFn = (topLevelTaskId: string, targetId: string, updates: any) => {
     handleDeepUpdate(tasks, updateTask, topLevelTaskId, targetId, updates);
@@ -2378,8 +2381,98 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                     )}
                                   </div>
 
+                                  {/* Inline Add Subtask Form */}
+                                  {addingSubtaskFor === task.id.toString() && (
+                                    <div className="mt-4 p-4 border border-blue-200 bg-blue-50/50 rounded-xl space-y-3 animate-fade-in shadow-sm">
+                                      <h4 className="text-xs font-bold text-[#1e3a5f] flex items-center gap-1.5 border-b border-blue-100 pb-2">
+                                        <Plus className="w-3.5 h-3.5" /> Create New Subtask
+                                      </h4>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                                        <div className="sm:col-span-2">
+                                          <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Subtask Name</label>
+                                          <input
+                                            autoFocus
+                                            type="text"
+                                            value={newSubtaskForm.title}
+                                            onChange={e => setNewSubtaskForm(prev => ({ ...prev, title: e.target.value }))}
+                                            className="w-full text-xs p-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all shadow-sm"
+                                            placeholder="e.g., Phase 1 Implementation..."
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Assignees</label>
+                                          <select
+                                            multiple
+                                            value={newSubtaskForm.assignees}
+                                            onChange={e => {
+                                              const opts = Array.from(e.target.selectedOptions).map(o => o.value);
+                                              setNewSubtaskForm(prev => ({ ...prev, assignees: opts }));
+                                            }}
+                                            className="w-full text-xs p-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all shadow-sm min-h-[60px]"
+                                          >
+                                            {assignableUsers.map((u: any) => (
+                                              <option key={u.id} value={u.id}>{u.name} ({u.role === ROLES.DEPT_HEAD ? 'Dept Head' : u.role})</option>
+                                            ))}
+                                          </select>
+                                          <p className="text-[9px] text-gray-400 mt-1 italic">Hold Ctrl/Cmd to select multiple</p>
+                                        </div>
+                                        <div>
+                                          <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Duration (Days)</label>
+                                          <input
+                                            type="number"
+                                            min="1"
+                                            value={newSubtaskForm.days}
+                                            onChange={e => setNewSubtaskForm(prev => ({ ...prev, days: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                            className="w-full text-xs p-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all shadow-sm"
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2 pt-3">
+                                        <button
+                                          onClick={() => {
+                                            if (!newSubtaskForm.title.trim()) return alert("Subtask title is required");
+                                            const newSub = { 
+                                              id: Date.now().toString(), 
+                                              title: newSubtaskForm.title, 
+                                              assignedTo: newSubtaskForm.assignees,
+                                              assignedDays: newSubtaskForm.days,
+                                              subtasks: [] 
+                                            };
+                                            updateTask(task.id, { subtasks: [...(task.subtasks || []), newSub] });
+                                            setAddingSubtaskFor(null);
+                                          }}
+                                          className="text-[11px] font-bold bg-[#1e3a5f] hover:bg-[#162d4a] text-white px-4 py-2 rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
+                                        >
+                                          <CheckCircle2 className="w-3.5 h-3.5" /> Save Subtask
+                                        </button>
+                                        <button
+                                          onClick={() => setAddingSubtaskFor(null)}
+                                          className="text-[11px] font-bold bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors shadow-sm"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
                                   {/* Dependencies UI */}
-                                  <div className="mt-4 pt-3 border-t border-gray-100 space-y-2">
+                                  <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
+                                        <Share2 className="w-3.5 h-3.5" /> Task Dependencies & Actions
+                                      </h4>
+                                      {!readOnly && (
+                                        <button
+                                          onClick={() => {
+                                            setNewSubtaskForm({ title: '', assignees: [], days: 1 });
+                                            setAddingSubtaskFor(task.id.toString());
+                                          }}
+                                          className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-colors shadow-sm"
+                                        >
+                                          <Plus className="w-3 h-3" /> Add Subtask
+                                        </button>
+                                      )}
+                                    </div>
                                     <div className="flex flex-wrap items-center gap-2">
                                       <span className="text-xs font-bold text-gray-500">Predecessors:</span>
                                       {task.predecessors && task.predecessors.length > 0 ? (
