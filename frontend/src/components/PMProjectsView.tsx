@@ -1023,6 +1023,14 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
     const projTasks = tasks.filter((t: any) => t.projectId === proj.id);
     const approvedTasks = projTasks.filter((t: any) => t.status === TASK_STATUS.PENDING_START).length;
     const totalAssignedDays = projTasks.reduce((s: number, t: any) => s + (t.assignedDays || 0), 0);
+    const delayedTasksCount = projTasks.filter((t: any) => {
+      if (t.status === 'Completed') return false;
+      if (!t.startedAt || !t.assignedDays) return false;
+      const start = new Date(t.startedAt);
+      const today = new Date();
+      const elapsed = getWorkingDaysElapsed(start, today);
+      return elapsed > t.assignedDays;
+    }).length;
 
     // Group all tasks by parent title
     const groupedForProjectProgress: Record<string, any[]> = {};
@@ -1329,10 +1337,11 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
         </div>
 
         {/* Summary stat cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatCard title="Total Tasks" value={projTasks.length} icon={CheckSquare} colorClass="bg-gray-100 text-gray-600" />
           <StatCard title="Target Tasks" value={approvedTasks} icon={CheckCircle} colorClass="bg-green-100 text-green-600" />
           <StatCard title="Days Assigned" value={`${totalAssignedDays}d`} icon={Clock} colorClass="bg-blue-50 text-[#3b82f6]" />
+          <StatCard title="Delayed Tasks" value={delayedTasksCount} icon={AlertTriangle} colorClass="bg-red-50 text-red-600" />
         </div>
 
         {/* Progress */}
