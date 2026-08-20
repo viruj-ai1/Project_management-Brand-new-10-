@@ -7,8 +7,8 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 export const AppContext = createContext<any>(null);
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
-  const [currentUser, setCurrentUser] = useState<any>(() => {
-    const saved = localStorage.getItem('currentUser');
+  const [currentUser, setCurrentUser] = useState<any | null>(() => {
+    const saved = sessionStorage.getItem('currentUser');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -19,11 +19,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     return null;
   });
 
+  // Keep sessionStorage in sync with state changes
   useEffect(() => {
     if (currentUser) {
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
     } else {
-      localStorage.removeItem('currentUser');
+      sessionStorage.removeItem('currentUser');
     }
   }, [currentUser]);
   const [users, setUsers] = useState<any[]>([]);
