@@ -53,33 +53,64 @@ const MainApp = () => {
   const { currentUser, setCurrentUser, tasks } = useContext(AppContext);
   const { notifications, unreadCount, readIds, markAllRead, markRead } = useContext(NotificationContext);
   const [activeTab, setActiveTabState] = useState(() => {
-    const hash = window.location.hash.replace('#', '');
+    const hash = window.location.hash.replace('#', '').split('?')[0];
     return hash || 'dashboard';
   });
-  const [selectedDashboardProjectId, setSelectedDashboardProjectId] = useState<string | null>(null);
+  const [selectedDashboardProjectId, setSelectedDashboardProjectId] = useState<string | null>(() => {
+    const hash = window.location.hash;
+    if (hash.includes('?project=')) {
+      return hash.split('?project=')[1].split('&')[0];
+    }
+    return null;
+  });
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
 
-  const setActiveTab = (tab: string) => {
-    if (window.location.hash !== `#${tab}`) {
-      window.location.hash = tab;
+  const navigate = (tab: string, projectId: string | null = null) => {
+    if (activeTab !== tab || selectedDashboardProjectId !== projectId) {
+      // Push state to the browser history, holding all required UI state
+      window.history.pushState({ tab, projectId }, '', `#${tab}${projectId ? `?project=${projectId}` : ''}`);
     }
     setActiveTabState(tab);
+    setSelectedDashboardProjectId(projectId);
   };
 
+  const setActiveTab = (tab: string) => navigate(tab, null);
+
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash && hash !== activeTab) {
-        setActiveTabState(hash);
+    // Initial state push so the first popstate has something to go back to
+    window.history.replaceState({ tab: activeTab, projectId: selectedDashboardProjectId }, '', `#${activeTab}${selectedDashboardProjectId ? `?project=${selectedDashboardProjectId}` : ''}`);
+
+    const handlePopState = (e: PopStateEvent) => {
+      // When the user clicks the browser back button, restore the complete page stack
+      if (e.state && e.state.tab) {
+        setActiveTabState(e.state.tab);
+        setSelectedDashboardProjectId(e.state.projectId || null);
+      } else {
+        const hash = window.location.hash.replace('#', '').split('?')[0];
+        if (hash) {
+           setActiveTabState(hash);
+           setSelectedDashboardProjectId(null);
+        }
       }
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [activeTab]);
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Prevent accidental application exit from browser back button
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Are you sure you want to exit the application?';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // Close bell dropdown on outside click
   useEffect(() => {
@@ -659,10 +690,7 @@ const MainApp = () => {
             ) : activeTab === 'pm-projects' ? (
               <PMProjectsView 
                 initialProjectId={selectedDashboardProjectId} 
-                onBack={() => {
-                  setSelectedDashboardProjectId(null);
-                  setActiveTab('dashboard');
-                }} 
+                onBack={() => navigate('dashboard', null)} 
               />
             ) : activeTab === 'active-work' ? (
               <ActiveWorkView />
@@ -676,8 +704,7 @@ const MainApp = () => {
                 {(currentUser.role === ROLES.MANAGEMENT || currentUser.role === ROLES.RD_HEAD) && (
                   <ManagementDashboard 
                     onProjectClick={(proj) => {
-                      setSelectedDashboardProjectId(proj.id);
-                      setActiveTab('pm-projects');
+                      navigate('pm-projects', proj.id);
                     }} 
                   />
                 )}
