@@ -3188,7 +3188,7 @@ const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) =
       return rawList;
     }
     // Otherwise, it's the old flat structure, migrate it
-    return [{ id: 'stage-default', stageName: 'General Materials', materials: rawList }];
+    return [{ id: 'stage-default', stageName: 'Stage 1', materials: rawList }];
   });
 
   const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({});
@@ -3288,26 +3288,16 @@ const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) =
                     {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                   </button>
                   
-                  {editingStageId === stage.id ? (
+                  <div className="flex items-center group flex-1">
                     <input
-                      autoFocus
                       type="text"
-                      className="px-2 py-1 text-sm font-bold text-gray-900 bg-white border border-blue-400 rounded outline-none focus:ring-2 focus:ring-blue-100 w-64"
+                      className="px-2 py-1 text-sm font-bold text-gray-900 bg-transparent hover:bg-gray-100 focus:bg-white border border-transparent hover:border-gray-200 focus:border-blue-400 rounded outline-none focus:ring-2 focus:ring-blue-100 transition-all w-full max-w-sm cursor-text"
                       value={stage.stageName}
                       onChange={(e) => updateStageName(stage.id, e.target.value)}
-                      onBlur={() => setEditingStageId(null)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') setEditingStageId(null); }}
+                      placeholder="Enter stage name..."
                     />
-                  ) : (
-                    <h4 
-                      className="text-sm font-bold text-gray-900 flex items-center gap-2 cursor-pointer group"
-                      onClick={() => setEditingStageId(stage.id)}
-                      title="Click to edit stage name"
-                    >
-                      {stage.stageName}
-                      <Edit2 className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </h4>
-                  )}
+                    <Edit2 className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 pointer-events-none" />
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
