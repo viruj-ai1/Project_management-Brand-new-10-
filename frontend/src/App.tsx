@@ -52,7 +52,10 @@ const PlaceholderView = ({ tabId, role }: { tabId: string, role: string }) => {
 const MainApp = () => {
   const { currentUser, setCurrentUser, tasks } = useContext(AppContext);
   const { notifications, unreadCount, readIds, markAllRead, markRead } = useContext(NotificationContext);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTabState] = useState(() => {
+    const hash = window.location.hash.replace('#', '');
+    return hash || 'dashboard';
+  });
   const [selectedDashboardProjectId, setSelectedDashboardProjectId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -60,9 +63,23 @@ const MainApp = () => {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
 
+  const setActiveTab = (tab: string) => {
+    if (window.location.hash !== `#${tab}`) {
+      window.location.hash = tab;
+    }
+    setActiveTabState(tab);
+  };
+
   useEffect(() => {
-    setActiveTab('dashboard');
-  }, [currentUser]);
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && hash !== activeTab) {
+        setActiveTabState(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [activeTab]);
 
   // Close bell dropdown on outside click
   useEffect(() => {
