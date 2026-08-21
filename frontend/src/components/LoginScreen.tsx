@@ -1,5 +1,5 @@
 import { useState, useContext } from 'react';
-import { Eye, EyeOff, Lock, User, AlertCircle, ShieldCheck, HelpCircle, X, UserCog, MessageSquare } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, AlertCircle, ShieldCheck, HelpCircle, X, UserCog, MessageSquare, ChevronLeft } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import axios from 'axios';
 import logoImg from '../assets/Logo.png';
@@ -58,9 +58,18 @@ export const LoginScreen = () => {
     <div className="min-h-screen flex flex-col bg-[#f8fafc] font-sans">
 
       <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <img src={logoImg} alt="Viruj Chematrix" className="h-9 w-auto object-contain flex-shrink-0 max-w-[36px]" />
-          <span className="text-lg font-bold text-[#1e3a5f] tracking-tight font-outfit">Viruj Chematrix</span>
+        <div className="flex items-center gap-6">
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 font-semibold text-sm transition-colors mr-2"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Back
+          </button>
+          <div className="flex items-center gap-3">
+            <img src={logoImg} alt="Viruj Chematrix" className="h-9 w-auto object-contain flex-shrink-0 max-w-[36px]" />
+            <span className="text-lg font-bold text-[#1e3a5f] tracking-tight font-outfit">Viruj Chematrix</span>
+          </div>
         </div>
         <div className="flex items-center gap-2 px-3.5 py-1.5 bg-blue-50 text-[#3b82f6] rounded-full text-xs font-semibold border border-blue-100">
           <ShieldCheck className="w-3.5 h-3.5" /> Secure Login

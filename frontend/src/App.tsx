@@ -449,6 +449,21 @@ const MainApp = () => {
             <Menu className="w-5 h-5" />
           </button>
 
+          {/* Global Back button */}
+          <button
+            onClick={() => {
+              if (window.history.length > 1) {
+                window.history.back();
+              } else {
+                setActiveTab('dashboard');
+              }
+            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Back
+          </button>
+
           {/* Page title */}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '1.1rem', color: '#111827', fontWeight: 700, letterSpacing: '-0.3px' }}>
