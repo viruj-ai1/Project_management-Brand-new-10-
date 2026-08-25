@@ -2,11 +2,7 @@ import React, { useState, createContext, useEffect } from 'react';
 import axios from 'axios';
 
 
-<<<<<<< HEAD
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-=======
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
->>>>>>> 7ce3b541fdc4664ef36a99970e28d06baa6b5efa
 const API_BASE = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
 
 export const AppContext = createContext<any>(null);
