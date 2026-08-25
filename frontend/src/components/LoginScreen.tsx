@@ -33,7 +33,8 @@ export const LoginScreen = () => {
     setIsLoading(true);
     try {
       const trimmed = username.trim();
-      const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") || 'http://localhost:5000/api';
+      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const apiBase = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
       const res = await axios.post(`${apiBase}/login`, {
         username: trimmed,
         password: password
