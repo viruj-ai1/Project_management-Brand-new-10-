@@ -892,6 +892,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   const [expandedTaskLogId, setExpandedTaskLogId] = useState<string | null>(null);
   const [editingParentTitle, setEditingParentTitle] = useState<string | null>(null);
   const [parentTitleEditValue, setParentTitleEditValue] = useState<string>('');
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [subtaskTitleEditValue, setSubtaskTitleEditValue] = useState<string>('');
   const [subtaskTabs, setSubtaskTabs] = useState<Record<string, 'list' | 'chart'>>({});
   const [bufferAllocateTask, setBufferAllocateTask] = useState<any>(null);
   const [bufferDaysInput, setBufferDaysInput] = useState<string>('');
@@ -907,6 +909,19 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
       });
     }
     setEditingParentTitle(null);
+  };
+
+  const handleSubtaskTitleSave = (task: any) => {
+    const newTitle = subtaskTitleEditValue.trim();
+    if (newTitle) {
+      const parts = task.title.split(' — ');
+      const parentTitle = parts[0];
+      const updatedTitle = parentTitle + ' — ' + newTitle;
+      if (updatedTitle !== task.title) {
+        updateTask(task.id, { title: updatedTitle });
+      }
+    }
+    setEditingSubtaskId(null);
   };
 
   const modifyPredecessorOfAny = (targetId: string, predId: string, isAdd: boolean) => {
@@ -1980,9 +1995,36 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                               <div key={task.id} className="pt-5 first:pt-0 flex flex-col md:flex-row gap-6 justify-between items-start w-full">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
-                                    <span className="font-bold text-gray-900 text-xs bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                                      {displayTitle}
-                                    </span>
+                                    {editingSubtaskId === task.id && !readOnly ? (
+                                      <div className="flex items-center gap-1.5">
+                                        <input
+                                          autoFocus
+                                          className="font-bold text-gray-900 text-xs bg-white px-2 py-0.5 rounded border border-gray-300 shadow-sm outline-none min-w-[150px]"
+                                          value={subtaskTitleEditValue}
+                                          onChange={e => setSubtaskTitleEditValue(e.target.value)}
+                                          onKeyDown={e => {
+                                            if (e.key === 'Enter') handleSubtaskTitleSave(task);
+                                          }}
+                                          onBlur={() => handleSubtaskTitleSave(task)}
+                                        />
+                                      </div>
+                                    ) : (
+                                      <span className="group relative font-bold text-gray-900 text-xs bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm flex items-center gap-1">
+                                        {displayTitle}
+                                        {!readOnly && (
+                                          <button
+                                            onClick={() => {
+                                              setEditingSubtaskId(task.id);
+                                              setSubtaskTitleEditValue(displayTitle);
+                                            }}
+                                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600 transition-opacity ml-1"
+                                            title="Edit Task Name"
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                          </button>
+                                        )}
+                                      </span>
+                                    )}
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${task.status === 'Completed' ? 'bg-green-100 text-green-700' :
                                         task.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
                                           task.status === 'Delayed' ? 'bg-red-100 text-red-700' :
