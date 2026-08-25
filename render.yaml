@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: viruj-chematrix-backend
+    env: python
+    region: ohio
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: CORS_ORIGINS
+        value: "https://your-vercel-domain.vercel.app" # TO BE REPLACED WITH ACTUAL VERCEL URL
+      - key: GROQ_API_KEY
+        sync: false # Requires manual entry in the Render Dashboard

@@ -3,7 +3,7 @@ import {
   FolderKanban, Plus, ChevronRight, Clock, Users, ShieldAlert,
   CheckCircle, XCircle, PauseCircle, Search, X, Calendar, Tag,
   User, Play, RotateCcw, CheckSquare, AlertCircle,
-  Activity, UserSquare2
+  Activity, UserSquare2, AlertTriangle
 } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { ROLES, TASK_STATUS } from '../constants';
@@ -197,11 +197,12 @@ export const RDProjectsView = () => {
         </div>
 
         {/* Summary stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <StatCard title="Total Tasks" value={projTasks.length} icon={CheckSquare} colorClass="bg-blue-100 text-blue-600" />
           <StatCard title="Tasks Approved" value={approvedCount} icon={CheckCircle} colorClass="bg-green-100 text-green-600" />
           <StatCard title="Days Assigned" value={`${totalAssignedDays}d`} icon={Clock} colorClass="bg-blue-50 text-[#3b82f6]" />
           <StatCard title="Buffer Saved" value={`${totalBufferDays}d`} icon={ShieldAlert} colorClass="bg-amber-100 text-amber-600" />
+          <StatCard title="Delayed Tasks" value={projTasks.filter((t: any) => t.status === 'Delayed').length} icon={AlertTriangle} colorClass="bg-red-50 text-red-600" />
         </div>
 
         {/* Progress bar */}
