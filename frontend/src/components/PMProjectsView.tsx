@@ -3385,11 +3385,11 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
   const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
   const BAR_COLOR = {
-    completed: { bar: 'bg-[#10B981]', text: 'Completed', dot: 'bg-[#10B981]' },
-    safe: { bar: 'bg-[#10B981]', text: 'Safe', dot: 'bg-[#10B981]' },
-    alert: { bar: 'bg-[#F59E0B]', text: 'Alert', dot: 'bg-[#F59E0B]' },
-    critical: { bar: 'bg-[#EF4444]', text: 'Critical', dot: 'bg-[#EF4444]' },
-    delayed: { bar: 'bg-[#FF5722]', text: 'Delayed', dot: 'bg-[#FF5722]' },
+    completed: { bar: 'bg-emerald-500', text: 'Completed', dot: 'bg-emerald-500' },
+    safe: { bar: 'bg-emerald-500', text: 'Safe', dot: 'bg-emerald-500' },
+    alert: { bar: 'bg-amber-500', text: 'Alert', dot: 'bg-amber-500' },
+    critical: { bar: 'bg-red-500', text: 'Critical', dot: 'bg-red-500' },
+    delayed: { bar: 'bg-orange-500', text: 'Delayed', dot: 'bg-orange-500' },
   };
 
   const getBarStyle = (d: typeof taskData[0]) => {
@@ -3614,9 +3614,9 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
         <p className="text-[11px] text-gray-500">Industry-standard colour coding comparing time elapsed against task duration.</p>
         <div className="relative w-full h-5 rounded-full overflow-hidden flex">
           {/* Coloured zone segments */}
-          <div className="h-full bg-[#10B981]" style={{ width: '65%' }} title="Safe 0–65%" />
-          <div className="h-full bg-[#F59E0B]" style={{ width: '25%' }} title="Alert 65–90%" />
-          <div className="h-full bg-[#EF4444]" style={{ width: '10%' }} title="Critical >90%" />
+          <div className="h-full bg-emerald-500" style={{ width: '65%' }} title="Safe 0–65%" />
+          <div className="h-full bg-amber-500" style={{ width: '25%' }} title="Alert 65–90%" />
+          <div className="h-full bg-red-500" style={{ width: '10%' }} title="Critical >90%" />
         </div>
         <div className="relative w-full">
           {/* Overall project progress marker */}
