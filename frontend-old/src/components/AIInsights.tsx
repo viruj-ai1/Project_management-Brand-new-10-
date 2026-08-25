@@ -88,8 +88,7 @@ export const AIInsights = () => {
     const fetchInsights = async () => {
       setIsLoading(true);
       try {
-      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const apiBase = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
         const response = await fetch(`${apiBase}/ai-insights`, {
           method: 'POST',
           headers: {
@@ -158,8 +157,7 @@ export const AIInsights = () => {
     setIsChatLoading(true);
 
     try {
-      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const apiBase = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
       const response = await fetch(`${apiBase}/ai-chat`, {
         method: 'POST',
         headers: {
@@ -389,7 +387,7 @@ export const AIInsights = () => {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               placeholder="Ask anything about your projects, delays, or critical chains..."
-              className="flex-1 p-3 px-4 bg-white border border-gray-300 text-gray-900 font-semibold placeholder:text-gray-400 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm shadow-sm"
+              className="flex-1 p-3 px-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm font-medium"
               disabled={isChatLoading}
             />
             <button

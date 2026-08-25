@@ -1,35 +1,58 @@
-# Project Management Portal
+# Viruj Chematrix (Decoupled Architecture)
 
-A comprehensive and modern Project Management Portal developed by Viruj Chematrix. This application provides a unified interface for project tracking, task management, and data visualization.
+A project management application tailored for Pharmaceutical & Specialty Chemical R&D, separated into a modern Next.js frontend (Vercel) and a fast Python backend (Render).
 
-## 🚀 Features
+## 🚀 Local Development
 
-* **Secure Authentication:** Robust login system ensuring data privacy and secure access control.
-* **Modern User Interface:** Built with React, offering a highly responsive, fast, and intuitive user experience.
-* **Data Visualization & Analytics:** Seamlessly integrated with Streamlit to provide real-time charts, metrics, and project analytics.
-* **Task Tracking:** Efficiently manage workflows, assign tasks, and monitor project milestones.
-* **Scalable Architecture:** Designed to handle multiple projects and growing team sizes efficiently.
+### 1. Backend (FastAPI)
+1. Ensure you have Python 3.11+ installed.
+2. Navigate to the `backend` folder:
+   ```bash
+   cd backend
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Set up `.env` (requires `GROQ_API_KEY` for AI features).
+5. Start the server:
+   ```bash
+   uvicorn main:app --reload --port 5000
+   ```
 
-## 💻 Tech Stack
+### 2. Frontend (Next.js)
+1. Navigate to the `frontend` folder:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env.local` file and add the backend URL:
+   ```
+   NEXT_PUBLIC_API_URL=http://localhost:5000
+   ```
+4. Start the dev server:
+   ```bash
+   npm run dev
+   ```
+5. Open [http://localhost:3000](http://localhost:3000)
 
-* **Frontend:** React, TypeScript, Tailwind CSS
-* **Data Visualization / Backend:** Python, Streamlit
-* **State Management & Routing:** React Router, Vite
+## ☁️ Deployment Guide
 
-## 🛠️ Quick Start
+### Backend (Render)
+1. Connect your repository to Render.
+2. Create a **New Web Service**.
+3. Render should auto-detect the `render.yaml` configuration in the root directory. If not, use the following:
+   - **Root Directory**: `backend`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Make sure to add `CORS_ORIGINS` to the Vercel URL once the frontend is deployed.
 
-### Prerequisites
-Make sure you have Node.js and Python installed on your machine.
-
-### Frontend Setup (React)
-1. Navigate to the frontend directory: `cd frontend`
-2. Install dependencies: `npm install`
-3. Start the development server: `npm run dev`
-
-### Analytics Setup (Streamlit)
-1. Navigate to the project root.
-2. Install dependencies (if you have a requirements file): `pip install -r requirements.txt`
-3. Run the Streamlit app: `streamlit run streamlit_app.py`
-
----
-*© 2026 Viruj Chematrix Pvt. Ltd. All rights reserved.*
+### Frontend (Vercel)
+1. Connect your repository to Vercel.
+2. Select the `frontend` directory as the Root Directory.
+3. Vercel will auto-detect Next.js and configure build settings.
+4. Add the `NEXT_PUBLIC_API_URL` environment variable pointing to the Render backend URL (e.g., `https://your-backend.onrender.com`).
+5. Deploy!

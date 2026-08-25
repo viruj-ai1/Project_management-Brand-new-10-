@@ -4,76 +4,76 @@
     "name": "Managing Director",
     "role": "Managing Director",
     "manager_id": null,
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$grYQCx3vi.Hw9Ks.HXdTKOsmqK/InOSLRAVdgmjYitUkuOKKrkNZK"
   },
   {
     "id": "u2",
     "name": "Vice President (R&D)",
     "role": "Vice President (R&D)",
     "manager_id": "u1",
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$2QfUf7QA3zSIQ3wfoyHxZOh7M5BPkF6C4uvE0sYFUmX4KzRUV1hvC"
   },
   {
     "id": "u3",
     "name": "Project Manager A",
     "role": "Project Manager",
     "manager_id": "u2",
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$Wd4dzTWoHVMENFSGoOIequaQGkiw0nE6CnGJGAsjDZvq.gY8dXLMa"
   },
   {
     "id": "u4",
     "name": "Project Manager B",
     "role": "Project Manager",
     "manager_id": "u2",
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$ec3zUd7yU0effF/H.LHoBOd4eBmmHd7R9BuFnGIlGADITRCioVJ2W"
   },
   {
     "id": "u5",
     "name": "ARD Head",
     "role": "Department Head",
     "manager_id": "u3",
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$cgNPPXqeYjOpkBTb.yzbp.nS6/hHjFG.upHbDQfyvkKwQCzOSlVCy"
   },
   {
     "id": "u6",
     "name": "CRD Head",
     "role": "Department Head",
     "manager_id": "u3",
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$JN4yJ6S.FA27nTF4UJaY8OP/ovmUSkWtmsEvsPQIsw8SCLJxyfHm2"
   },
   {
     "id": "u7",
     "name": "DQA Head",
     "role": "Department Head",
     "manager_id": "u4",
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$dScwISFYgQyiTwjvXm6Ho.Tel7FX0p7oWc.gi3moMS2C0rO9oev9W"
   },
   {
     "id": "u8",
     "name": "SCM Head (RD)",
     "role": "Department Head",
     "manager_id": "u4",
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$hTL6Io9ZVdjDxTSWRTiAi.djX2YtbFPhqPBdJIBpknqu5ZlI4D/0G"
   },
   {
     "id": "u9",
     "name": "Tech Transfer (TTR) Head",
     "role": "Department Head",
     "manager_id": "u4",
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$83ECjM8Zggw32.9WwFWaLO6GQ9am9IA9Y6vwl3BH2KT8qdEsyotLK"
   },
   {
     "id": "u10",
     "name": "Senior Chemist (ARD)",
     "role": "Analysts/Chemists",
     "manager_id": "u5",
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$1Me4sL8nc..CX882DA/03OzlABuC7sFMaz1sJ.vH96Rot76LgVRlu"
   },
   {
     "id": "u11",
     "name": "External Client",
     "role": "Client",
     "manager_id": null,
-    "password_hash": "$2b$12$NqO7/6Vz2y.x9d.v2R3Z4.j5.J1.P1.J1.J1.J1.J1.J1.J1"
+    "password_hash": "$2b$12$gsYHSTPMQyrKjQS4t9CQGe7NhiBJID7kG.un4/MiZCsUAU/qn/Opy"
   }
 ]
