@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   FolderKanban, ChevronRight, ChevronDown, Clock, ShieldAlert, CheckSquare,
   Send, UserSquare2, Activity, AlertCircle, CheckCircle,
-  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles, Edit2, Share2
+  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles
 } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { TASK_STATUS, ROLES, computeDynamicBufferPool, addWorkingDays, isRestDay, getWorkingDaysElapsed } from '../constants';
@@ -287,8 +287,8 @@ const TaskDurationEditor = ({ task, updateTask, readOnly, projects, updateProjec
     const finalTotalDays = unit === 'weeks'
       ? calculateWorkingDaysFromWeeks(numericVal)
       : Math.round(numericVal);
-    const assignedDays = finalTotalDays <= 3 ? finalTotalDays : Math.round(finalTotalDays * 0.7 * 100) / 100;
-    const bufferDays = finalTotalDays <= 3 ? 0 : Math.round((finalTotalDays - assignedDays) * 100) / 100;
+    const assignedDays = finalTotalDays <= 3 ? finalTotalDays : Math.ceil(finalTotalDays * 0.7);
+    const bufferDays = finalTotalDays <= 3 ? 0 : finalTotalDays - assignedDays;
 
     updateTask(task.id, {
       durationValue: numericVal,
@@ -868,278 +868,6 @@ export const useAllTaskDates = (tasks: any[], projects: any[]) => {
   }, [tasks, projects]);
 };
 
-
-const deepCloneAndModify = (tasksArray: any[], targetId: string, modifierFn: (task: any) => any): any[] => {
-  return tasksArray.map(task => {
-    if (String(task.id) === String(targetId)) {
-      return modifierFn(task);
-    }
-    if (task.subtasks && Array.isArray(task.subtasks)) {
-      const updatedSubtasks = deepCloneAndModify(task.subtasks, targetId, modifierFn);
-      if (updatedSubtasks !== task.subtasks) {
-        return { ...task, subtasks: updatedSubtasks };
-      }
-    }
-    return task;
-  });
-};
-
-const handleDeepUpdate = (tasks: any[], updateTask: any, topLevelTaskId: string, targetId: string, updates: any) => {
-  const topLevelTask = tasks.find((t: any) => String(t.id) === String(topLevelTaskId));
-  if (!topLevelTask) return;
-  const newTasks = deepCloneAndModify([topLevelTask], targetId, (task: any) => ({ ...task, ...updates }));
-  const updatedTopLevel = newTasks[0];
-  if (String(topLevelTaskId) === String(targetId)) {
-    updateTask(topLevelTaskId, updates);
-  } else {
-    updateTask(topLevelTaskId, { subtasks: updatedTopLevel.subtasks });
-  }
-};
-
-const RecursiveTaskRow = ({ st, task, stStart, stEnd, plannedStart, plannedEnd, depth, ctx }: any) => {
-  const {
-    readOnly, allProjectNodes, handleDeepUpdateFn, handleDeepDeleteFn,
-    expandedSubtaskId, setExpandedSubtaskId,
-    chainMap, assigneesMap, fmtDate, addWorkingDays,
-    proj, updateTask
-  } = ctx;
-
-  const stCompleted = st.completed;
-  const stStatus = stCompleted ? 'Completed' : (st.startedAt ? 'In Progress' : 'Pending Start');
-  
-  const isUnblocked = (() => {
-    if (stCompleted) return true;
-    if (!st.predecessors || st.predecessors.length === 0) return true;
-    const findNode = (nodes: any[], targetId: string): any => {
-       for(const n of nodes) {
-         if(String(n.id) === String(targetId)) return n;
-         if(n.subtasks) {
-           const found = findNode(n.subtasks, targetId);
-           if(found) return found;
-         }
-       }
-       return null;
-    };
-    return st.predecessors.every((predId: string) => {
-      const pred = findNode(task.subtasks || [], predId);
-      return !pred || pred.completed;
-    });
-  })();
-
-  const isExpandedSubtask = expandedSubtaskId === String(st.id);
-  const stAssignedDays = Number(st.days) || 1;
-  const stChainStatus = chainMap.get(String(st.id));
-  const stStatusBg = stStatus === 'Completed' ? 'bg-blue-50 text-[#1e3a5f]' :
-    stStatus === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-      'bg-gray-100 text-gray-500';
-
-  const assignees = assigneesMap(st.assignedTo);
-
-  return (
-    <div className={`pt-4 border-t border-gray-100 first:border-0 w-full`} style={{ marginLeft: `${depth > 1 ? 1.5 : 0}rem` }}>
-      <div className="flex flex-col md:flex-row gap-6 justify-between items-start w-full">
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
-            <span className="font-bold text-gray-900 text-xs bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-              {st.title || 'Untitled Subtask'}
-            </span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stStatusBg}`}>
-               <Activity className="w-2.5 h-2.5 inline mr-1" />{stStatus}
-             </span>
-             {!isUnblocked && !stCompleted && (
-               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                 Blocked
-               </span>
-             )}
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200 shadow-sm">
-              Subtask Depth {depth}
-            </span>
-            
-            {/* Edit Title Button */}
-            {!readOnly && (
-               <button
-                 onClick={() => {
-                   const newTitle = window.prompt("Edit Subtask Title", st.title);
-                   if (newTitle && newTitle.trim() !== "" && newTitle !== st.title) {
-                     handleDeepUpdateFn(task.id, st.id, { title: newTitle });
-                   }
-                 }}
-                 className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-[#3b82f6] px-1.5 py-1 rounded hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
-                 title="Edit subtask title"
-               >
-                 <Edit2 className="w-3 h-3" /> Edit
-               </button>
-            )}
-
-            {/* Add Subtask Button */}
-            {!readOnly && (
-               <button
-                 onClick={() => {
-                   const newSub = { id: Date.now().toString(), title: 'New Nested Subtask', days: 1, subtasks: [] };
-                   handleDeepUpdateFn(task.id, st.id, { subtasks: [...(st.subtasks||[]), newSub] });
-                 }}
-                 className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-green-500 px-1.5 py-1 rounded hover:bg-green-50 transition-colors border border-transparent hover:border-green-200"
-                 title="Add nested subtask"
-               >
-                 <Plus className="w-3 h-3" /> Add Subtask
-               </button>
-            )}
-            
-            {/* Delete Subtask Button */}
-            {!readOnly && (
-               <button
-                 onClick={() => {
-                   if(window.confirm("Delete this subtask and all its children?")) {
-                       handleDeepDeleteFn(task.id, st.id);
-                   }
-                 }}
-                 className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-red-500 px-1.5 py-1 rounded hover:bg-red-50 transition-colors border border-transparent hover:border-red-200 ml-auto"
-                 title="Delete subtask"
-               >
-                 <Trash2 className="w-3 h-3" /> Delete
-               </button>
-            )}
-          </div>
-          
-          <div className="flex flex-wrap gap-4 mt-2 mb-2">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <UserSquare2 className="w-3.5 h-3.5 text-gray-400" />
-              <strong className="text-gray-700">
-                {assignees.length > 0 ? assignees.map((a: any) => a.name).join(', ') : 'Unknown'}
-              </strong>
-            </div>
-            <div className="flex flex-col gap-1 text-xs text-gray-500">
-              <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-gray-400" />
-                <span>Planned Start: <strong className="text-gray-700">{fmtDate(plannedStart)}</strong></span>
-                <span className="text-gray-300">•</span>
-                <span>Planned End: <strong className="text-gray-700">{fmtDate(plannedEnd)}</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-blue-400" />
-                <span>Dynamic Start: <strong className="text-[#1e3a5f]">{fmtDate(stStart)}</strong></span>
-                <span className="text-gray-300">•</span>
-                <span>Dynamic End: <strong className="text-[#1e3a5f]">{fmtDate(stEnd)}</strong></span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right side panel */}
-        <div className="flex items-center gap-4 shrink-0 w-full md:w-auto">
-          <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-4 shadow-sm w-full sm:w-52 space-y-3 shrink-0">
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              Duration
-            </div>
-            <div className="space-y-1.5 text-xs text-gray-600">
-              <div className="flex justify-between items-center font-bold">
-                <span>Assigned Days:</span>
-                {!readOnly ? (
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number"
-                      min="1"
-                      className="w-12 p-1 border rounded text-xs text-center"
-                      defaultValue={st.days || 1}
-                      onBlur={(e) => {
-                        const newDays = parseFloat(e.target.value);
-                        if(newDays > 0 && newDays !== st.days) handleDeepUpdateFn(task.id, st.id, { days: newDays });
-                      }}
-                    />
-                    <span>Days</span>
-                  </div>
-                ) : (
-                  <span className="text-green-600">{stAssignedDays} Days</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setExpandedSubtaskId(isExpandedSubtask ? null : st.id.toString())}
-            className="p-2 text-gray-400 hover:text-[#3b82f6] hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100 self-center flex items-center justify-center"
-            title="Toggle Action Points & Daily Logs"
-          >
-            <ChevronDown className={`w-5 h-5 transition-transform ${isExpandedSubtask ? 'rotate-180' : ''}`} />
-          </button>
-        </div>
-      </div>
-      
-      {/* Expanded subtask details (Action Points + Daily Logs) */}
-      {isExpandedSubtask && (
-         <div className="mt-4 bg-gray-50/50 border border-gray-200 rounded-xl p-4 space-y-4 w-full">
-           <div>
-             <h4 className="font-bold text-xs text-gray-700 flex items-center gap-1.5 mb-2">
-               <Activity className="w-3.5 h-3.5 text-blue-400" /> Day-to-Day Reasoning
-             </h4>
-             {(() => {
-               const assignedDaysForLog = Number(st.days) || 1;
-               const logs = st.dailyLogs || [];
-               return (
-                 <div className="space-y-1.5">
-                   {Array.from({ length: assignedDaysForLog }).map((_, dayIdx) => {
-                     const isCompleted = st.dailyLogsCompleted?.[dayIdx];
-                     return (
-                       <div key={dayIdx} className="flex items-start gap-2">
-                         <button
-                           onClick={() => {
-                             if (readOnly) return;
-                             const newCompleted = st.dailyLogsCompleted ? [...st.dailyLogsCompleted] : [];
-                             newCompleted[dayIdx] = !newCompleted[dayIdx];
-                             handleDeepUpdateFn(task.id, st.id, { dailyLogsCompleted: newCompleted });
-                           }}
-                           disabled={readOnly}
-                           className={`w-6 h-6 rounded flex items-center justify-center font-bold text-[10px] shrink-0 transition-colors ${readOnly ? '' : 'cursor-pointer hover:opacity-80 shadow-sm'} ${isCompleted ? 'bg-green-500 text-white border border-green-600' : 'bg-blue-50 text-[#1e3a5f] border border-blue-200'}`}
-                         >
-                           D{dayIdx + 1}
-                         </button>
-                         <div className={`flex-1 bg-white border rounded p-1.5 text-[10px] min-h-[28px] transition-colors ${isCompleted ? 'border-green-200 bg-green-50/30 text-gray-700' : 'border-gray-200 text-gray-600'}`}>
-                           {logs[dayIdx] || <span className="italic text-gray-300">No update</span>}
-                         </div>
-                       </div>
-                     );
-                   })}
-                 </div>
-               );
-             })()}
-           </div>
-         </div>
-      )}
-
-      {/* Recursive children rendering */}
-      {st.subtasks && st.subtasks.length > 0 && (
-         <div className="mt-4 space-y-6 ml-6 border-l-2 border-blue-100 pl-4 w-full">
-           {renderSubtasks(task, st.subtasks, stStart, plannedStart, ctx, depth + 1)}
-         </div>
-      )}
-    </div>
-  );
-};
-
-const renderSubtasks = (parentTask: any, subtasks: any[], startDyn: Date, startPlan: Date, ctx: any, depth: number) => {
-  let dStart = startDyn;
-  let pStart = startPlan;
-  return subtasks.map((st: any) => {
-    const stDays = st.days || 1;
-    const stStart = dStart;
-    const stEnd = ctx.addWorkingDays(stStart, stDays);
-    dStart = stEnd;
-
-    const plannedStart = pStart;
-    const plannedEnd = ctx.addWorkingDays(plannedStart, stDays);
-    pStart = plannedEnd;
-
-    return (
-      <RecursiveTaskRow 
-        key={st.id} st={st} task={parentTask} 
-        stStart={stStart} stEnd={stEnd} 
-        plannedStart={plannedStart} plannedEnd={plannedEnd} 
-        depth={depth} ctx={ctx} 
-      />
-    );
-  });
-};
-
 export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { initialProjectId?: string | null, onBack?: (() => void) | null }) => {
   const { currentUser, projects, tasks, addTasksBulk, updateTask, users, updateProject } = useContext(AppContext);
   const isBelowPM = currentUser.role === ROLES.DEPT_HEAD || currentUser.role === ROLES.EMPLOYEE;
@@ -1165,26 +893,6 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   const [subtaskTabs, setSubtaskTabs] = useState<Record<string, 'list' | 'chart'>>({});
   const [bufferAllocateTask, setBufferAllocateTask] = useState<any>(null);
   const [bufferDaysInput, setBufferDaysInput] = useState<string>('');
-
-  const [addingSubtaskFor, setAddingSubtaskFor] = useState<string | null>(null);
-  const [newSubtaskForm, setNewSubtaskForm] = useState({ title: '', assignees: [] as string[], days: 1 });
-
-  const handleDeepUpdateFn = (topLevelTaskId: string, targetId: string, updates: any) => {
-    handleDeepUpdate(tasks, updateTask, topLevelTaskId, targetId, updates);
-  };
-  const handleDeepDeleteFn = (topLevelTaskId: string, targetId: string) => {
-     const topLevelTask = tasks.find((t: any) => String(t.id) === String(topLevelTaskId));
-     if (!topLevelTask) return;
-     const removeNode = (list: any[]): any[] => {
-        return list.filter(t => String(t.id) !== String(targetId)).map(t => {
-           if(t.subtasks) return { ...t, subtasks: removeNode(t.subtasks) };
-           return t;
-        });
-     };
-     const updatedSubtasks = removeNode(topLevelTask.subtasks || []);
-     updateTask(topLevelTaskId, { subtasks: updatedSubtasks });
-  };
-
 
   const modifyPredecessorOfAny = (targetId: string, predId: string, isAdd: boolean) => {
     const taskMatch = tasks.find((t: any) => String(t.id) === String(targetId));
@@ -1315,14 +1023,6 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
     const projTasks = tasks.filter((t: any) => t.projectId === proj.id);
     const approvedTasks = projTasks.filter((t: any) => t.status === TASK_STATUS.PENDING_START).length;
     const totalAssignedDays = projTasks.reduce((s: number, t: any) => s + (t.assignedDays || 0), 0);
-    const delayedTasksCount = projTasks.filter((t: any) => {
-      if (t.status === 'Completed') return false;
-      if (!t.startedAt || !t.assignedDays) return false;
-      const start = new Date(t.startedAt);
-      const today = new Date();
-      const elapsed = getWorkingDaysElapsed(start, today);
-      return elapsed > t.assignedDays;
-    }).length;
 
     // Group all tasks by parent title
     const groupedForProjectProgress: Record<string, any[]> = {};
@@ -1403,8 +1103,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
             const stVal = parseFloat(st.durationValue) || 0;
             const stUnit = st.durationUnit || 'days';
             const stFinalTotalDays = stUnit === 'weeks' ? calculateWorkingDaysFromWeeks(stVal) : stVal;
-            const stAssignedDays = stFinalTotalDays <= 3 ? stFinalTotalDays : Math.round(stFinalTotalDays * 0.7 * 100) / 100;
-            const stBufferDays = stFinalTotalDays <= 3 ? 0 : Math.round((stFinalTotalDays - stAssignedDays) * 100) / 100;
+            const stAssignedDays = stFinalTotalDays <= 3 ? stFinalTotalDays : Math.ceil(stFinalTotalDays * 0.7);
+            const stBufferDays = stFinalTotalDays <= 3 ? 0 : stFinalTotalDays - stAssignedDays;
 
             parentFinalTotalDays += stFinalTotalDays;
             parentAssignedDays += stAssignedDays;
@@ -1430,8 +1130,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
             durationValue: parentFinalTotalDays, // Fallback representing total days
             durationUnit: 'days',
             finalTotalDays: parentFinalTotalDays,
-            assignedDays: Math.round(parentAssignedDays * 100) / 100,
-            plannedBufferDays: Math.round(parentBufferDays * 100) / 100,
+            assignedDays: parentAssignedDays,
+            plannedBufferDays: parentBufferDays,
             bufferDays: 0,
             subtasks: mappedSubtasks,
             prerequisitesChecklist: []
@@ -1440,8 +1140,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
           parentFinalVal = parseFloat(task.durationValue) || 1;
           parentUnit = task.durationUnit || 'days';
           parentFinalTotalDays = parentUnit === 'weeks' ? calculateWorkingDaysFromWeeks(parentFinalVal) : parentFinalVal;
-          parentAssignedDays = parentFinalTotalDays <= 3 ? parentFinalTotalDays : Math.round(parentFinalTotalDays * 0.7 * 100) / 100;
-          parentBufferDays = parentFinalTotalDays <= 3 ? 0 : Math.round((parentFinalTotalDays - parentAssignedDays) * 100) / 100;
+          parentAssignedDays = parentFinalTotalDays <= 3 ? parentFinalTotalDays : Math.ceil(parentFinalTotalDays * 0.7);
+          parentBufferDays = parentFinalTotalDays <= 3 ? 0 : parentFinalTotalDays - parentAssignedDays;
 
           totalNewBuffer += parentBufferDays;
 
@@ -1629,11 +1329,10 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
         </div>
 
         {/* Summary stat cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard title="Total Tasks" value={projTasks.length} icon={CheckSquare} colorClass="bg-gray-100 text-gray-600" />
           <StatCard title="Target Tasks" value={approvedTasks} icon={CheckCircle} colorClass="bg-green-100 text-green-600" />
           <StatCard title="Days Assigned" value={`${totalAssignedDays}d`} icon={Clock} colorClass="bg-blue-50 text-[#3b82f6]" />
-          <StatCard title="Delayed Tasks" value={delayedTasksCount} icon={AlertTriangle} colorClass="bg-red-50 text-red-600" />
         </div>
 
         {/* Progress */}
@@ -1807,7 +1506,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                   const stVal = parseFloat(st.durationValue) || 0;
                                   const stUnit = st.durationUnit || 'days';
                                   const stFinal = stUnit === 'weeks' ? calculateWorkingDaysFromWeeks(stVal) : stVal;
-                                  return sum + (stFinal <= 3 ? stFinal : Math.round(stFinal * 0.7 * 100) / 100);
+                                  return sum + (stFinal <= 3 ? stFinal : Math.ceil(stFinal * 0.7));
                                 }, 0);
                                 return (
                                   <div className="w-full p-2.5 border border-gray-300 rounded-xl bg-gray-50 text-gray-700 text-xs font-bold flex justify-between shadow-inner">
@@ -1880,11 +1579,9 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                               const stVal = parseFloat(st.durationValue) || 0;
                               const stUnit = st.durationUnit || 'days';
                               const stFinal = stUnit === 'weeks' ? calculateWorkingDaysFromWeeks(stVal) : stVal;
-                              return sum + (stFinal <= 3 ? stFinal : Math.round(stFinal * 0.7 * 100) / 100);
+                              return sum + (stFinal <= 3 ? stFinal : Math.ceil(stFinal * 0.7));
                             }, 0);
-                            const bufferTotal = Math.round((totalDays - assignedTotal) * 100) / 100;
-                            const assignedPct = totalDays > 0 ? Math.round((assignedTotal / totalDays) * 100) : 70;
-                            const bufferPct = 100 - assignedPct;
+                            const bufferTotal = totalDays - assignedTotal;
 
                             return (
                               <div className="rounded-xl border p-3 mb-2 bg-blue-50 border-blue-200">
@@ -1897,8 +1594,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                   </span>
                                 </div>
                                 <div className="flex justify-between mt-1">
-                                  <span className="text-[10px] text-gray-600 font-bold">{assignedTotal}d Assigned Work ({assignedPct}%)</span>
-                                  <span className="text-[10px] text-gray-600 font-bold">{bufferTotal}d Buffer Generated ({bufferPct}%)</span>
+                                  <span className="text-[10px] text-gray-600 font-bold">{assignedTotal}d Assigned Work (70%)</span>
+                                  <span className="text-[10px] text-gray-600 font-bold">{bufferTotal}d Buffer Generated (30%)</span>
                                 </div>
                               </div>
                             );
@@ -2171,26 +1868,9 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                     <Card key={parentTitle} className="p-6 hover:border-gray-300 transition-all space-y-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-4">
                         <div className="flex-1">
-                          <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2 mb-2 group">
+                          <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2 mb-2">
                             <CheckSquare className="w-5 h-5 text-[#3b82f6]" />
                             {parentTitle}
-                            {!readOnly && (
-                              <button
-                                onClick={() => {
-                                  const newTitle = window.prompt("Edit Main Task Title", parentTitle);
-                                  if (newTitle && newTitle.trim() !== "" && newTitle !== parentTitle) {
-                                    subtasksList.forEach((t: any) => {
-                                      const suffix = t.title.substring(parentTitle.length);
-                                      updateTask(t.id, { title: newTitle + suffix });
-                                    });
-                                  }
-                                }}
-                                className="flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-[#3b82f6] ml-2 px-2 py-1 rounded-md hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
-                                title="Edit title"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" /> Edit
-                              </button>
-                            )}
                           </h4>
                           <div className="flex flex-col gap-2 mt-2">
                             <div className="flex items-center gap-3">
@@ -2256,26 +1936,9 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                               <div key={task.id} className="pt-5 first:pt-0 flex flex-col md:flex-row gap-6 justify-between items-start w-full">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="font-bold text-gray-900 text-xs bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                                        {displayTitle}
-                                      </span>
-                                      {!readOnly && (
-                                        <button
-                                          onClick={() => {
-                                            const newTitle = window.prompt("Edit Subtask Title", displayTitle);
-                                            if (newTitle && newTitle.trim() !== "" && newTitle !== displayTitle) {
-                                              const newFullTitle = newTitle === 'Main Task' ? parentTitle : `${parentTitle} — ${newTitle}`;
-                                              updateTask(task.id, { title: newFullTitle });
-                                            }
-                                          }}
-                                          className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-[#3b82f6] px-1.5 py-1 rounded hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
-                                          title="Edit subtask title"
-                                        >
-                                          <Edit2 className="w-3 h-3" /> Edit
-                                        </button>
-                                      )}
-                                    </div>
+                                    <span className="font-bold text-gray-900 text-xs bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                      {displayTitle}
+                                    </span>
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${task.status === 'Completed' ? 'bg-green-100 text-green-700' :
                                         task.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
                                           task.status === 'Delayed' ? 'bg-red-100 text-red-700' :
@@ -2381,98 +2044,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                     )}
                                   </div>
 
-                                  {/* Inline Add Subtask Form */}
-                                  {addingSubtaskFor === task.id.toString() && (
-                                    <div className="mt-4 p-4 border border-blue-200 bg-blue-50/50 rounded-xl space-y-3 animate-fade-in shadow-sm">
-                                      <h4 className="text-xs font-bold text-[#1e3a5f] flex items-center gap-1.5 border-b border-blue-100 pb-2">
-                                        <Plus className="w-3.5 h-3.5" /> Create New Subtask
-                                      </h4>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                                        <div className="sm:col-span-2">
-                                          <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Subtask Name</label>
-                                          <input
-                                            autoFocus
-                                            type="text"
-                                            value={newSubtaskForm.title}
-                                            onChange={e => setNewSubtaskForm(prev => ({ ...prev, title: e.target.value }))}
-                                            className="w-full text-xs p-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all shadow-sm"
-                                            placeholder="e.g., Phase 1 Implementation..."
-                                          />
-                                        </div>
-                                        <div>
-                                          <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Assignees</label>
-                                          <select
-                                            multiple
-                                            value={newSubtaskForm.assignees}
-                                            onChange={e => {
-                                              const opts = Array.from(e.target.selectedOptions).map(o => o.value);
-                                              setNewSubtaskForm(prev => ({ ...prev, assignees: opts }));
-                                            }}
-                                            className="w-full text-xs p-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all shadow-sm min-h-[60px]"
-                                          >
-                                            {assignableUsers.map((u: any) => (
-                                              <option key={u.id} value={u.id}>{u.name} ({u.role === ROLES.DEPT_HEAD ? 'Dept Head' : u.role})</option>
-                                            ))}
-                                          </select>
-                                          <p className="text-[9px] text-gray-400 mt-1 italic">Hold Ctrl/Cmd to select multiple</p>
-                                        </div>
-                                        <div>
-                                          <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Duration (Days)</label>
-                                          <input
-                                            type="number"
-                                            min="1"
-                                            value={newSubtaskForm.days}
-                                            onChange={e => setNewSubtaskForm(prev => ({ ...prev, days: Math.max(1, parseInt(e.target.value) || 1) }))}
-                                            className="w-full text-xs p-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all shadow-sm"
-                                          />
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2 pt-3">
-                                        <button
-                                          onClick={() => {
-                                            if (!newSubtaskForm.title.trim()) return alert("Subtask title is required");
-                                            const newSub = { 
-                                              id: Date.now().toString(), 
-                                              title: newSubtaskForm.title, 
-                                              assignedTo: newSubtaskForm.assignees,
-                                              assignedDays: newSubtaskForm.days,
-                                              subtasks: [] 
-                                            };
-                                            updateTask(task.id, { subtasks: [...(task.subtasks || []), newSub] });
-                                            setAddingSubtaskFor(null);
-                                          }}
-                                          className="text-[11px] font-bold bg-[#1e3a5f] hover:bg-[#162d4a] text-white px-4 py-2 rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
-                                        >
-                                          <CheckCircle2 className="w-3.5 h-3.5" /> Save Subtask
-                                        </button>
-                                        <button
-                                          onClick={() => setAddingSubtaskFor(null)}
-                                          className="text-[11px] font-bold bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors shadow-sm"
-                                        >
-                                          Cancel
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-
                                   {/* Dependencies UI */}
-                                  <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <h4 className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
-                                        <Share2 className="w-3.5 h-3.5" /> Task Dependencies & Actions
-                                      </h4>
-                                      {!readOnly && (
-                                        <button
-                                          onClick={() => {
-                                            setNewSubtaskForm({ title: '', assignees: [], days: 1 });
-                                            setAddingSubtaskFor(task.id.toString());
-                                          }}
-                                          className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-colors shadow-sm"
-                                        >
-                                          <Plus className="w-3 h-3" /> Add Subtask
-                                        </button>
-                                      )}
-                                    </div>
+                                  <div className="mt-4 pt-3 border-t border-gray-100 space-y-2">
                                     <div className="flex flex-wrap items-center gap-2">
                                       <span className="text-xs font-bold text-gray-500">Predecessors:</span>
                                       {task.predecessors && task.predecessors.length > 0 ? (
@@ -2681,27 +2254,336 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                     );
                                   })()}
 
-
                                   {/* ── Read-only Subtasks (PM view) ── */}
                                   {task.subtasks && task.subtasks.length > 0 && (() => {
                                     let currentDynamicStart = allTaskDates[task.id]?.start || new Date();
                                     let currentPlannedStart = allTaskDates[task.id]?.plannedStart || new Date();
-                                    const assigneesMap = (assignedTo: any) => users.filter((u: any) => Array.isArray(assignedTo) ? assignedTo.includes(u.id) : assignedTo === u.id);
-                                    
-                                    const ctx = {
-                                      readOnly, allProjectNodes, handleDeepUpdateFn, handleDeepDeleteFn,
-                                      expandedSubtaskId, setExpandedSubtaskId,
-                                      chainMap, assigneesMap, fmtDate, addWorkingDays,
-                                      proj, updateTask
-                                    };
-                                    
+
                                     return (
                                       <div className="mt-4 space-y-6 ml-6 border-l-2 border-blue-100 pl-4 w-full">
-                                        {renderSubtasks(task, task.subtasks, currentDynamicStart, currentPlannedStart, ctx, 1)}
+                                        {task.subtasks.map((st: any) => {
+                                          const stDays = st.days || 1;
+                                          const stStart = currentDynamicStart;
+                                          const stEnd = addWorkingDays(stStart, stDays);
+                                          currentDynamicStart = stEnd;
+
+                                          const plannedStart = currentPlannedStart;
+                                          const plannedEnd = addWorkingDays(plannedStart, stDays);
+                                          currentPlannedStart = plannedEnd;
+
+                                          const stCompleted = st.completed;
+                                          const stStatus = stCompleted ? 'Completed' : (st.startedAt ? 'In Progress' : 'Pending Start');
+                                          
+                                          const isUnblocked = (() => {
+                                            if (stCompleted) return true;
+                                            if (!st.predecessors || st.predecessors.length === 0) return true;
+                                            return st.predecessors.every((predId: string) => {
+                                              const pred = task.subtasks.find((s: any) => String(s.id) === String(predId));
+                                              return !pred || pred.completed;
+                                            });
+                                          })();
+
+
+                                          // isExpandedSubtask
+                                          const isExpandedSubtask = expandedSubtaskId === st.id.toString();
+
+                                          // Duration Split metrics
+                                          const stAssignedDays = Number(st.days) || 1;
+
+                                          const stChainStatus = chainMap.get(String(st.id));
+
+                                          // subtask status badges colors
+                                          const stStatusBg = stStatus === 'Completed' ? 'bg-blue-50 text-[#1e3a5f]' :
+                                            stStatus === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                                              'bg-gray-100 text-gray-500';
+
+                                          return (
+                                            <div key={st.id} className="pt-4 border-t border-gray-100 first:border-0 w-full">
+                                              <div className="flex flex-col md:flex-row gap-6 justify-between items-start">
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
+                                                    <span className="font-bold text-gray-900 text-xs bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                                      {st.title || 'Untitled Subtask'}
+                                                    </span>
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stStatusBg}`}>
+                                                       <Activity className="w-2.5 h-2.5 inline mr-1" />{stStatus}
+                                                     </span>
+                                                     {!isUnblocked && !stCompleted && (
+                                                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                                         Blocked
+                                                       </span>
+                                                     )}
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200 shadow-sm">
+                                                      Subtask
+                                                    </span>
+                                                    {stChainStatus && (
+                                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm border ${stChainStatus === 'Critical' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                                                        }`}>
+                                                        {stChainStatus} Chain
+                                                      </span>
+                                                    )}
+                                                  </div>
+
+
+
+                                                  <div className="flex flex-wrap gap-4 mt-2 mb-2">
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                      <UserSquare2 className="w-3.5 h-3.5 text-gray-400" />
+                                                      <strong className="text-gray-700">
+                                                        {assignees.length > 0 ? assignees.map((a: any) => a.name).join(', ') : 'Unknown'}
+                                                      </strong>
+                                                    </div>
+                                                    <div className="flex flex-col gap-1 text-xs text-gray-500">
+                                                      <div className="flex items-center gap-2">
+                                                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                                        <span>Planned Start: <strong className="text-gray-700">{fmtDate(plannedStart)}</strong></span>
+                                                        <span className="text-gray-300">•</span>
+                                                        <span>Planned End: <strong className="text-gray-700">{fmtDate(plannedEnd)}</strong></span>
+                                                      </div>
+                                                      <div className="flex items-center gap-2">
+                                                        <Clock className="w-3.5 h-3.5 text-blue-400" />
+                                                        <span>Dynamic Start: <strong className="text-[#1e3a5f]">{fmtDate(stStart)}</strong></span>
+                                                        <span className="text-gray-300">•</span>
+                                                        <span>Dynamic End: <strong className="text-[#1e3a5f]">{fmtDate(stEnd)}</strong></span>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+
+                                                  {/* Subtask Dependencies UI */}
+                                                  <div className="mt-2 pt-2 border-t border-gray-100 space-y-2">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                      <span className="text-[10px] font-bold text-gray-500 uppercase">Predecessors:</span>
+                                                      {st.predecessors && st.predecessors.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                          {st.predecessors.map((predId: string) => {
+                                                            const predNode = allProjectNodes.find(n => String(n.id) === String(predId));
+                                                            return (
+                                                              <span key={predId} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-200 shadow-sm">
+                                                                {predNode ? predNode.title : 'Deleted Node'}
+                                                                {!readOnly && (
+                                                                  <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveSubtaskPredecessor(st.id, predId)}
+                                                                    className="text-red-400 hover:text-red-600 font-bold ml-1 text-[10px]"
+                                                                  >
+                                                                    ×
+                                                                  </button>
+                                                                )}
+                                                              </span>
+                                                            );
+                                                          })}
+                                                        </div>
+                                                      ) : (
+                                                        <span className="text-[10px] text-gray-400 italic">None</span>
+                                                      )}
+
+                                                      {!readOnly && allProjectNodes.filter(n => n.projectId === proj.id && String(n.id) !== String(st.id) && !(st.predecessors || []).map(String).includes(String(n.id))).length > 0 && (
+                                                        <select
+                                                          className="p-1 text-[10px] border border-gray-200 rounded bg-white text-gray-600 outline-none focus:ring-1 focus:ring-blue-500 ml-auto cursor-pointer max-w-[120px]"
+                                                          value=""
+                                                          onChange={e => {
+                                                            if (e.target.value) handleAddSubtaskPredecessor(st.id, e.target.value);
+                                                          }}
+                                                        >
+                                                          <option value="">+ Add</option>
+                                                          {allProjectNodes
+                                                            .filter(n => n.projectId === proj.id && String(n.id) !== String(st.id) && !(st.predecessors || []).map(String).includes(String(n.id)))
+                                                            .map((n: any) => <option key={n.id} value={n.id}>{n.title}</option>)
+                                                          }
+                                                        </select>
+                                                      )}
+                                                    </div>
+
+                                                    {(() => {
+                                                      const successors = allProjectNodes.filter(n => n.predecessors.includes(String(st.id)));
+                                                      const eligibleSuccessors = allProjectNodes.filter(n =>
+                                                        n.projectId === proj.id && String(n.id) !== String(st.id) &&
+                                                        !n.predecessors.includes(String(st.id)) &&
+                                                        !(st.predecessors || []).map(String).includes(String(n.id))
+                                                      );
+
+                                                      return (
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                          <span className="text-[10px] font-bold text-gray-500 uppercase">Successors:</span>
+                                                          {successors.length > 0 ? (
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                              {successors.map((succ: any) => (
+                                                                <span key={succ.id} className="inline-flex items-center gap-1 bg-blue-50 text-[#1e3a5f] text-[10px] font-bold px-2 py-0.5 rounded border border-blue-100 shadow-sm">
+                                                                  {succ.title}
+                                                                  {!readOnly && (
+                                                                    <button
+                                                                      type="button"
+                                                                      onClick={() => handleRemoveSubtaskSuccessor(st.id, succ.id)}
+                                                                      className="text-red-400 hover:text-red-600 font-bold ml-1 text-[10px]"
+                                                                    >
+                                                                      ×
+                                                                    </button>
+                                                                  )}
+                                                                </span>
+                                                              ))}
+                                                            </div>
+                                                          ) : (
+                                                            <span className="text-[10px] text-gray-400 italic">None</span>
+                                                          )}
+
+                                                          {!readOnly && eligibleSuccessors.length > 0 && (
+                                                            <select
+                                                              className="p-1 text-[10px] border border-gray-200 rounded bg-white text-gray-600 outline-none focus:ring-1 focus:ring-blue-500 ml-auto cursor-pointer max-w-[120px]"
+                                                              value=""
+                                                              onChange={e => {
+                                                                if (e.target.value) handleAddSubtaskSuccessor(st.id, e.target.value);
+                                                              }}
+                                                            >
+                                                              <option value="">+ Add</option>
+                                                              {eligibleSuccessors.map((n: any) => <option key={n.id} value={n.id}>{n.title}</option>)}
+                                                            </select>
+                                                          )}
+                                                        </div>
+                                                      );
+                                                    })()}
+                                                  </div>
+                                                </div>
+
+                                                {/* Right side panel - Duration Split & Arrow Toggle */}
+                                                <div className="flex items-center gap-4 shrink-0 w-full md:w-auto">
+                                                  <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-4 shadow-sm w-full sm:w-52 space-y-3 shrink-0">
+                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                                      Duration
+                                                    </div>
+                                                    <div className="space-y-1.5 text-xs text-gray-600">
+                                                      <div className="flex justify-between items-center font-bold">
+                                                        <span>Assigned Days:</span>
+                                                        {!readOnly ? (
+                                                          <div className="flex items-center gap-1.5">
+                                                            <SubtaskDaysInput
+                                                              initialDays={st.days}
+                                                              onSave={(newDays) => {
+                                                                const updatedSubtasks = task.subtasks.map((subSt: any) => {
+                                                                  if (subSt.id === st.id) {
+                                                                    return { ...subSt, days: newDays };
+                                                                  }
+                                                                  return subSt;
+                                                                });
+
+                                                                let parentAssignedDays = 0;
+                                                                let parentFinalTotalDays = 0;
+                                                                let parentPlannedBufferDays = 0;
+
+                                                                updatedSubtasks.forEach((subSt: any) => {
+                                                                  const subDays = parseFloat(subSt.days) || 0;
+                                                                  parentAssignedDays += subDays;
+
+                                                                  let subTotal = subDays;
+                                                                  let subBuffer = 0;
+                                                                  if (subDays > 3) {
+                                                                    subTotal = Math.ceil(subDays / 0.7);
+                                                                    subBuffer = subTotal - subDays;
+                                                                  }
+                                                                  parentFinalTotalDays += subTotal;
+                                                                  parentPlannedBufferDays += subBuffer;
+                                                                });
+
+                                                                updateTask(task.id, {
+                                                                  subtasks: updatedSubtasks,
+                                                                  assignedDays: parentAssignedDays,
+                                                                  finalTotalDays: parentFinalTotalDays,
+                                                                  plannedBufferDays: parentPlannedBufferDays
+                                                                });
+                                                              }}
+                                                            />
+                                                            <span>Days</span>
+                                                          </div>
+                                                        ) : (
+                                                          <span className="text-green-600">{stAssignedDays} Days</span>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+
+                                                  <button
+                                                    onClick={() => setExpandedSubtaskId(isExpandedSubtask ? null : st.id.toString())}
+                                                    className="p-2 text-gray-400 hover:text-[#3b82f6] hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100 self-center flex items-center justify-center"
+                                                    title="Toggle Action Points & Daily Logs"
+                                                  >
+                                                    <ChevronDown className={`w-5 h-5 transition-transform ${isExpandedSubtask ? 'rotate-180' : ''}`} />
+                                                  </button>
+                                                </div>
+                                              </div>
+
+                                              {isExpandedSubtask && (
+                                                <div className="mt-4 bg-gray-50/50 border border-gray-200 rounded-xl p-4 space-y-4 w-full">
+                                                  {/* Action Points */}
+                                                  <div>
+                                                    <h4 className="font-bold text-xs text-gray-700 flex items-center gap-1.5 mb-2">
+                                                      <CheckSquare className="w-3.5 h-3.5 text-blue-400" /> Action Points
+                                                    </h4>
+                                                    {!st.actionPoints || st.actionPoints.length === 0 ? (
+                                                      <p className="text-[10px] text-gray-400 italic">No action points provided.</p>
+                                                    ) : (
+                                                      <div className="space-y-1.5">
+                                                        {st.actionPoints.map((ap: any, apIdx: number) => (
+                                                          <div key={apIdx} className="flex items-start gap-2 bg-white rounded p-2 border border-gray-200">
+                                                            <input type="checkbox" checked={ap.done || false} readOnly className="mt-0.5 w-3 h-3 text-[#3b82f6] rounded border-gray-300" />
+                                                            <span className={`text-[10px] ${ap.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>{ap.text || 'Empty action point'}</span>
+                                                          </div>
+                                                        ))}
+                                                      </div>
+                                                    )}
+                                                  </div>
+
+                                                  {/* Daily Log */}
+                                                  <div>
+                                                    <h4 className="font-bold text-xs text-gray-700 flex items-center gap-1.5 mb-2">
+                                                      <Activity className="w-3.5 h-3.5 text-blue-400" /> Day-to-Day Reasoning
+                                                    </h4>
+                                                    {(() => {
+                                                      const assignedDaysForLog = Number(st.days) || 1;
+                                                      const logs = st.dailyLogs || [];
+                                                      if (logs.length === 0 && !logs.some((l: string) => l)) {
+                                                        return <p className="text-[10px] text-gray-400 italic">No daily logs recorded yet.</p>;
+                                                      }
+                                                      return (
+                                                        <div className="space-y-1.5">
+                                                          {Array.from({ length: assignedDaysForLog }).map((_, dayIdx) => {
+                                                            const isCompleted = st.dailyLogsCompleted?.[dayIdx];
+                                                            return (
+                                                              <div key={dayIdx} className="flex items-start gap-2">
+                                                                <button
+                                                                  onClick={() => {
+                                                                    if (readOnly) return;
+                                                                    const newCompleted = st.dailyLogsCompleted ? [...st.dailyLogsCompleted] : [];
+                                                                    newCompleted[dayIdx] = !newCompleted[dayIdx];
+                                                                    const newSubtasks = task.subtasks.map((s: any) =>
+                                                                      s.id === st.id ? { ...s, dailyLogsCompleted: newCompleted } : s
+                                                                    );
+                                                                    updateTask(task.id, { subtasks: newSubtasks });
+                                                                  }}
+                                                                  disabled={readOnly}
+                                                                  className={`w-6 h-6 rounded flex items-center justify-center font-bold text-[10px] shrink-0 transition-colors ${readOnly ? '' : 'cursor-pointer hover:opacity-80 shadow-sm'} ${isCompleted ? 'bg-green-500 text-white border border-green-600' : 'bg-blue-50 text-[#1e3a5f] border border-blue-200'}`}
+                                                                  title={isCompleted ? "Mark as incomplete" : "Mark as completed"}
+                                                                >
+                                                                  D{dayIdx + 1}
+                                                                </button>
+                                                                <div className={`flex-1 bg-white border rounded p-1.5 text-[10px] min-h-[28px] transition-colors ${isCompleted ? 'border-green-200 bg-green-50/30 text-gray-700' : 'border-gray-200 text-gray-600'}`}>
+                                                                  {logs[dayIdx] || <span className="italic text-gray-300">No update</span>}
+                                                                </div>
+                                                              </div>
+                                                            );
+                                                          })}
+                                                        </div>
+                                                      );
+                                                    })()}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
                                       </div>
                                     );
                                   })()}
                                 </div>
+
                                 {/* Right panel: duration editor */}
                                 <div className="flex-shrink-0 sm:min-w-[190px] w-full sm:w-auto">
                                   <TaskDurationEditor task={task} updateTask={updateTask} readOnly={readOnly} projects={projects} updateProject={updateProject} />
@@ -3258,91 +3140,27 @@ const ProjectDependencyChart = ({ projTasks }: { projTasks: any[] }) => {
   );
 };
 
-interface RMItem {
-  name: string;
-  casNumber: string;
-  remarks: string;
-}
-
-interface RMStage {
-  id: string;
-  stageName: string;
-  materials: RMItem[];
-}
-
 const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) => {
-  const [stages, setStages] = useState<RMStage[]>(() => {
-    const rawList = proj.rmList;
-    if (!rawList || rawList.length === 0) {
-      return [{ id: 'stage-' + Date.now(), stageName: 'Stage 1', materials: [{ name: '', casNumber: '', remarks: '' }] }];
-    }
-    // Check if it's already using the new structure
-    if (rawList[0].stageName !== undefined && Array.isArray(rawList[0].materials)) {
-      return rawList;
-    }
-    // Otherwise, it's the old flat structure, migrate it
-    return [{ id: 'stage-default', stageName: 'Stage 1', materials: rawList }];
-  });
+  const [data, setData] = useState<any[]>(proj.rmList?.length ? proj.rmList : [{ name: '', casNumber: '', remarks: '' }]);
 
-  const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({});
-  const [editingStageId, setEditingStageId] = useState<string | null>(null);
-
-  const toggleExpand = (stageId: string) => {
-    setExpandedStages(prev => ({ ...prev, [stageId]: prev[stageId] === false ? true : false }));
+  const updateCell = (rowIndex: number, colName: string, val: string) => {
+    const newData = [...data];
+    newData[rowIndex] = { ...newData[rowIndex], [colName]: val };
+    setData(newData);
   };
 
-  const addStage = () => {
-    const newStage: RMStage = {
-      id: 'stage-' + Date.now(),
-      stageName: `Stage ${stages.length + 1}`,
-      materials: [{ name: '', casNumber: '', remarks: '' }]
-    };
-    setStages([...stages, newStage]);
-    setEditingStageId(newStage.id); // Automatically focus the new stage name for editing
+  const addRow = () => {
+    setData([...data, { name: '', casNumber: '', remarks: '' }]);
   };
 
-  const removeStage = (stageId: string) => {
-    if (!confirm(`Are you sure you want to delete this entire stage and all its materials?`)) return;
-    setStages(stages.filter(s => s.id !== stageId));
-  };
-
-  const updateStageName = (stageId: string, newName: string) => {
-    setStages(stages.map(s => s.id === stageId ? { ...s, stageName: newName } : s));
-  };
-
-  const addRow = (stageId: string) => {
-    setStages(stages.map(s => {
-      if (s.id === stageId) {
-        return { ...s, materials: [...s.materials, { name: '', casNumber: '', remarks: '' }] };
-      }
-      return s;
-    }));
-  };
-
-  const removeRow = (stageId: string, index: number) => {
+  const removeRow = (index: number) => {
     if (!confirm(`Are you sure you want to delete Raw Material at row ${index + 1}?`)) return;
-    setStages(stages.map(s => {
-      if (s.id === stageId) {
-        const newMaterials = s.materials.filter((_, i) => i !== index);
-        return { ...s, materials: newMaterials.length ? newMaterials : [{ name: '', casNumber: '', remarks: '' }] };
-      }
-      return s;
-    }));
-  };
-
-  const updateCell = (stageId: string, rowIndex: number, colName: keyof RMItem, val: string) => {
-    setStages(stages.map(s => {
-      if (s.id === stageId) {
-        const newMaterials = [...s.materials];
-        newMaterials[rowIndex] = { ...newMaterials[rowIndex], [colName]: val };
-        return { ...s, materials: newMaterials };
-      }
-      return s;
-    }));
+    const newData = data.filter((_, i) => i !== index);
+    setData(newData.length ? newData : [{ name: '', casNumber: '', remarks: '' }]);
   };
 
   const save = () => {
-    updateProject(proj.id, { rmList: stages });
+    updateProject(proj.id, { rmList: data });
     alert("Saved Raw Material list successfully!");
   };
 
@@ -3354,10 +3172,10 @@ const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) =
         </h3>
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={addStage}
-            className="bg-blue-50 hover:bg-blue-100 text-[#1e3a5f] px-3.5 py-1.5 rounded-lg text-xs font-bold border border-blue-200 transition-all flex items-center gap-1.5"
+            onClick={addRow}
+            className="bg-blue-50 hover:bg-blue-50 text-[#1e3a5f] px-3.5 py-1.5 rounded-lg text-xs font-bold border border-blue-200 transition-all flex items-center gap-1.5"
           >
-            <Plus className="w-4 h-4" /> Add Stage
+            <Plus className="w-4 h-4" /> Add Row
           </button>
           <button
             onClick={save}
@@ -3367,124 +3185,60 @@ const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) =
           </button>
         </div>
       </div>
-
-      <div className="space-y-4 mt-4">
-        {stages.map((stage, stageIdx) => {
-          const isCollapsed = expandedStages[stage.id] === false;
-
-          return (
-            <div key={stage.id} className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
-              {/* Stage Header */}
-              <div className="bg-gray-50 border-b border-gray-200 p-3 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 flex-1">
-                  <button onClick={() => toggleExpand(stage.id)} className="text-gray-500 hover:text-gray-800 transition-colors p-1 rounded-md hover:bg-gray-200">
-                    {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                  </button>
-                  
-                  <div className="flex items-center group flex-1">
-                    <input
-                      type="text"
-                      className="px-2 py-1 text-sm font-bold text-gray-900 bg-transparent hover:bg-gray-100 focus:bg-white border border-transparent hover:border-gray-200 focus:border-blue-400 rounded outline-none focus:ring-2 focus:ring-blue-100 transition-all w-full max-w-sm cursor-text"
-                      value={stage.stageName}
-                      onChange={(e) => updateStageName(stage.id, e.target.value)}
-                      placeholder="Enter stage name..."
-                    />
-                    <Edit2 className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 pointer-events-none" />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
+      <div className="overflow-x-auto border border-gray-200 rounded-xl">
+        <table className="w-full text-left text-sm whitespace-nowrap">
+          <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold">
+            <tr>
+              <th className="p-3.5 border-r border-gray-200 w-16 text-center">S.No.</th>
+              <th className="p-3.5 border-r border-gray-200 min-w-[250px]">Name of the Raw material</th>
+              <th className="p-3.5 border-r border-gray-200 min-w-[180px]">CAS Number</th>
+              <th className="p-3.5 border-r border-gray-200 min-w-[280px]">Remarks</th>
+              <th className="p-3.5 w-16 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row, rowIndex) => (
+              <tr key={rowIndex} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/30 transition-colors">
+                <td className="p-3.5 font-semibold text-gray-600 bg-gray-50 border-r border-gray-200 text-center w-16">
+                  {rowIndex + 1}
+                </td>
+                <td className="p-1 border-r border-gray-100 min-w-[250px]">
+                  <input
+                    className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
+                    placeholder="Enter name of raw material..."
+                    value={row.name || ''}
+                    onChange={e => updateCell(rowIndex, 'name', e.target.value)}
+                  />
+                </td>
+                <td className="p-1 border-r border-gray-100 min-w-[180px]">
+                  <input
+                    className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
+                    placeholder="e.g. 103-90-2"
+                    value={row.casNumber || ''}
+                    onChange={e => updateCell(rowIndex, 'casNumber', e.target.value)}
+                  />
+                </td>
+                <td className="p-1 border-r border-gray-100 min-w-[280px]">
+                  <input
+                    className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
+                    placeholder="Enter remarks..."
+                    value={row.remarks || ''}
+                    onChange={e => updateCell(rowIndex, 'remarks', e.target.value)}
+                  />
+                </td>
+                <td className="p-1 text-center w-16">
                   <button
-                    onClick={() => addRow(stage.id)}
-                    className="text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Material
-                  </button>
-                  <button
-                    onClick={() => removeStage(stage.id)}
-                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors"
-                    title="Delete Stage"
+                    onClick={() => removeRow(rowIndex)}
+                    className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50"
+                    title="Delete Row"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                </div>
-              </div>
-
-              {/* Stage Body */}
-              {!isCollapsed && (
-                <div className="overflow-x-auto bg-white">
-                  <table className="w-full text-left text-sm whitespace-nowrap">
-                    <thead className="bg-gray-50/50 border-b border-gray-200 text-gray-500 font-semibold text-xs uppercase tracking-wider">
-                      <tr>
-                        <th className="p-3 border-r border-gray-200 w-16 text-center">S.No.</th>
-                        <th className="p-3 border-r border-gray-200 min-w-[250px]">Name of the Raw material</th>
-                        <th className="p-3 border-r border-gray-200 min-w-[180px]">CAS Number</th>
-                        <th className="p-3 border-r border-gray-200 min-w-[280px]">Remarks</th>
-                        <th className="p-3 w-16 text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stage.materials.map((row, rowIndex) => (
-                        <tr key={rowIndex} className="border-b border-gray-100 last:border-0 hover:bg-blue-50/20 transition-colors">
-                          <td className="p-3 font-semibold text-gray-500 bg-gray-50/30 border-r border-gray-200 text-center w-16 text-xs">
-                            {rowIndex + 1}
-                          </td>
-                          <td className="p-1 border-r border-gray-100 min-w-[250px]">
-                            <input
-                              className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
-                              placeholder="Enter name of raw material..."
-                              value={row.name || ''}
-                              onChange={e => updateCell(stage.id, rowIndex, 'name', e.target.value)}
-                            />
-                          </td>
-                          <td className="p-1 border-r border-gray-100 min-w-[180px]">
-                            <input
-                              className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
-                              placeholder="e.g. 103-90-2"
-                              value={row.casNumber || ''}
-                              onChange={e => updateCell(stage.id, rowIndex, 'casNumber', e.target.value)}
-                            />
-                          </td>
-                          <td className="p-1 border-r border-gray-100 min-w-[280px]">
-                            <input
-                              className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
-                              placeholder="Enter remarks..."
-                              value={row.remarks || ''}
-                              onChange={e => updateCell(stage.id, rowIndex, 'remarks', e.target.value)}
-                            />
-                          </td>
-                          <td className="p-1 text-center w-16">
-                            <button
-                              onClick={() => removeRow(stage.id, rowIndex)}
-                              className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50"
-                              title="Delete Row"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {stage.materials.length === 0 && (
-                        <tr>
-                          <td colSpan={5} className="p-4 text-center text-sm text-gray-500 italic">
-                            No materials in this stage.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {stages.length === 0 && (
-          <div className="text-center py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-            <FolderKanban className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-gray-500 font-medium">No stages created yet</p>
-            <p className="text-xs text-gray-400 mt-1">Click "Add Stage" to get started</p>
-          </div>
-        )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </Card>
   );
@@ -3556,11 +3310,11 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
   const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
   const BAR_COLOR = {
-    completed: { bar: 'bg-[#10B981]', text: 'Completed', dot: 'bg-[#10B981]' },
-    safe: { bar: 'bg-[#2563EB]', text: 'Safe', dot: 'bg-[#2563EB]' },
-    alert: { bar: 'bg-[#F59E0B]', text: 'Alert', dot: 'bg-[#F59E0B]' },
-    critical: { bar: 'bg-[#7C3AED]', text: 'Critical', dot: 'bg-[#7C3AED]' },
-    delayed: { bar: 'bg-[#DC2626]', text: 'Delayed', dot: 'bg-[#DC2626]' },
+    completed: { bar: 'bg-emerald-500', text: 'Completed', dot: 'bg-emerald-500' },
+    safe: { bar: 'bg-blue-500', text: 'Safe', dot: 'bg-blue-500' },
+    alert: { bar: 'bg-yellow-400', text: 'Alert', dot: 'bg-yellow-400' },
+    critical: { bar: 'bg-red-500', text: 'Critical', dot: 'bg-red-500' },
+    delayed: { bar: 'bg-red-500', text: 'Delayed', dot: 'bg-red-500' },
   };
 
   const getBarStyle = (d: typeof taskData[0]) => {
@@ -3599,10 +3353,6 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
               <span className="text-gray-600">{cfg.text}</span>
             </span>
           ))}
-          <span className="flex items-center gap-1.5 ml-2 border-l pl-3 border-gray-200">
-            <span className="w-4 h-1.5 rounded-full bg-[#64748B] opacity-80" />
-            <span className="text-gray-600">Planned Schedule</span>
-          </span>
         </div>
       </div>
 
@@ -3667,8 +3417,8 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                     {/* Task label */}
                     <div className="w-48 flex-shrink-0 pr-4 pl-4 py-2 border-r border-gray-400 flex flex-col justify-center">
                       <div className="text-xs font-bold text-gray-900 truncate flex items-center gap-1.5" title={task.title}>
-                        {d.isCritical && <AlertTriangle className="w-3.5 h-3.5 text-[#7C3AED] flex-shrink-0" />}
-                        {d.isAlert && <AlertCircle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0" />}
+                        {d.isCritical && <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
+                        {d.isAlert && <AlertCircle className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />}
                         <span className="truncate">{task.title}</span>
                       </div>
                       {!isClientView && <div className="text-[10px] text-gray-500 truncate" title={assigneeNames}>{assigneeNames}</div>}
@@ -3735,7 +3485,7 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                       {/* Bottom Bar: Planned Duration (Grey) */}
                       {plannedStart && plannedEnd && dateToPercent(plannedStart) <= 100 && (
                         <div
-                          className="absolute bottom-1.5 h-2.5 rounded-full shadow-sm bg-[#64748B] opacity-80"
+                          className="absolute bottom-1.5 h-2.5 rounded-full shadow-sm bg-gray-500 opacity-80"
                           style={{
                             left: `${dateToPercent(plannedStart)}%`,
                             width: `${Math.max(0.5, dateToPercent(plannedEnd) - dateToPercent(plannedStart))}%`
@@ -3787,9 +3537,9 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
         <p className="text-[11px] text-gray-500">Industry-standard colour coding comparing time elapsed against task duration.</p>
         <div className="relative w-full h-5 rounded-full overflow-hidden flex">
           {/* Coloured zone segments */}
-          <div className="h-full bg-[#2563EB]/80" style={{ width: '65%' }} title="Safe 0–65%" />
-          <div className="h-full bg-[#F59E0B]/80" style={{ width: '25%' }} title="Alert 65–90%" />
-          <div className="h-full bg-[#7C3AED]/80" style={{ width: '10%' }} title="Critical >90%" />
+          <div className="h-full bg-green-300" style={{ width: '65%' }} title="Safe 0–65%" />
+          <div className="h-full bg-yellow-200" style={{ width: '25%' }} title="Alert 65–90%" />
+          <div className="h-full bg-red-300" style={{ width: '10%' }} title="Critical >90%" />
         </div>
         <div className="relative w-full">
           {/* Overall project progress marker */}
@@ -3802,7 +3552,7 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
             const completedCount = taskData.filter(d => d.isCompleted).length;
             const delayedCount = taskData.filter(d => d.isDelayed).length;
             const label = delayedCount > 0 ? 'Behind Schedule' : projPct > 90 ? 'Critical' : projPct > 65 ? 'Alert' : 'On/Ahead of Schedule';
-            const labelColor = delayedCount > 0 ? 'bg-[#DC2626]' : projPct > 90 ? 'bg-[#7C3AED]' : projPct > 65 ? 'bg-[#F59E0B]' : 'bg-[#2563EB]';
+            const labelColor = delayedCount > 0 ? 'bg-red-500' : projPct > 90 ? 'bg-red-500' : projPct > 65 ? 'bg-yellow-500' : 'bg-green-500';
             return (
               <>
                 <div
@@ -3815,10 +3565,10 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                 </div>
                 <div className="flex items-center justify-between mt-6">
                   <div className="flex flex-wrap gap-3 text-[11px] font-semibold">
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#2563EB]" />Safe (0–65%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />Alert (65–90%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#7C3AED]" />Critical (&gt;90%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />Delayed</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500" />Safe (0–65%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />Alert (65–90%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />Critical (&gt;90%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />Delayed</span>
                   </div>
                   <span className={`text-[11px] font-black text-white px-3 py-1 rounded-full shadow-sm ${labelColor}`}>
                     {label}

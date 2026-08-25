@@ -10,7 +10,7 @@ export const computeCriticalChain = (projTasks: any[]) => {
       t.subtasks.forEach((st: any) => {
         flatNodes.push({
           id: String(st.id),
-          assignedDays: Number(st.days) || 1,
+          assignedDays: Math.ceil((Number(st.days) || 1) * 0.7),
           predecessors: (st.predecessors || []).map(String)
         });
       });
