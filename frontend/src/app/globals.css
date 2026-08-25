@@ -11,13 +11,16 @@ body {
   font-family: Inter, system-ui, sans-serif;
 }
 
-/* Guarantee dark, highly legible text for all inputs and placeholders */
+/* Guarantee jet black, 100% visible text for all inputs and placeholders */
 input, textarea, select {
-  color: #0f172a !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
 }
 
 input::placeholder, textarea::placeholder {
-  color: #64748b !important;
+  color: #475569 !important;
+  -webkit-text-fill-color: #475569 !important;
   opacity: 1 !important;
 }
 
