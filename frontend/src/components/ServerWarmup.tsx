@@ -17,11 +17,7 @@ export function ServerWarmup() {
       }, 1000);
 
       try {
-<<<<<<< HEAD
         const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-=======
-        const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
->>>>>>> 7ce3b541fdc4664ef36a99970e28d06baa6b5efa
         const response = await fetch(`${url}/health`);
         if (response.ok) {
           clearTimeout(timeoutId);
