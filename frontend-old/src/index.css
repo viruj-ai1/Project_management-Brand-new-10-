@@ -40,9 +40,28 @@ input:-webkit-autofill:focus {
 }
 
 input::placeholder, textarea::placeholder {
-  color: #64748b !important;
-  -webkit-text-fill-color: #64748b !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 0.7 !important;
+}
+
+/* Force Viruj AI Assistant chat prompt text and placeholder to pure jet black */
+.viruj-ai-input,
+.viruj-ai-input:focus,
+.viruj-ai-input:active {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background-color: #ffffff !important;
+  font-weight: 700 !important;
   opacity: 1 !important;
+}
+
+.viruj-ai-input::placeholder,
+.viruj-ai-input::-webkit-input-placeholder {
+  color: #1e293b !important;
+  -webkit-text-fill-color: #1e293b !important;
+  opacity: 0.8 !important;
+  font-weight: 600 !important;
 }
 
 /* Headings use Outfit for a clean, modern look */
