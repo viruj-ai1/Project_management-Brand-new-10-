@@ -3491,10 +3491,11 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
 
   const BAR_COLOR = {
     completed: { bar: 'bg-emerald-500', text: 'Completed', dot: 'bg-emerald-500' },
-    safe: { bar: 'bg-emerald-500', text: 'Safe', dot: 'bg-emerald-500' },
+    safe: { bar: 'bg-blue-500', text: 'Safe', dot: 'bg-blue-500' },
     alert: { bar: 'bg-amber-500', text: 'Alert', dot: 'bg-amber-500' },
     critical: { bar: 'bg-red-500', text: 'Critical', dot: 'bg-red-500' },
-    delayed: { bar: 'bg-orange-500', text: 'Delayed', dot: 'bg-orange-500' },
+    delayed: { bar: 'bg-purple-500', text: 'Delayed', dot: 'bg-purple-500' },
+    baseline: { bar: 'bg-gray-500', text: 'Baseline Schedule', dot: 'bg-gray-500' },
   };
 
   const getBarStyle = (d: typeof taskData[0]) => {
@@ -3719,7 +3720,7 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
         <p className="text-[11px] text-gray-500">Industry-standard colour coding comparing time elapsed against task duration.</p>
         <div className="relative w-full h-5 rounded-full overflow-hidden flex">
           {/* Coloured zone segments */}
-          <div className="h-full bg-emerald-500" style={{ width: '65%' }} title="Safe 0–65%" />
+          <div className="h-full bg-blue-500" style={{ width: '65%' }} title="Safe 0–65%" />
           <div className="h-full bg-amber-500" style={{ width: '25%' }} title="Alert 65–90%" />
           <div className="h-full bg-red-500" style={{ width: '10%' }} title="Critical >90%" />
         </div>
@@ -3734,7 +3735,7 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
             const completedCount = taskData.filter(d => d.isCompleted).length;
             const delayedCount = taskData.filter(d => d.isDelayed).length;
             const label = delayedCount > 0 ? 'Behind Schedule' : projPct > 90 ? 'Critical' : projPct > 65 ? 'Alert' : 'On/Ahead of Schedule';
-            const labelColor = delayedCount > 0 ? 'bg-red-500' : projPct > 90 ? 'bg-red-500' : projPct > 65 ? 'bg-yellow-500' : 'bg-green-500';
+            const labelColor = delayedCount > 0 ? 'bg-purple-500' : projPct > 90 ? 'bg-red-500' : projPct > 65 ? 'bg-amber-500' : 'bg-blue-500';
             return (
               <>
                 <div
@@ -3747,10 +3748,10 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                 </div>
                 <div className="flex items-center justify-between mt-6">
                   <div className="flex flex-wrap gap-3 text-[11px] font-semibold">
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500" />Safe (0–65%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />Alert (65–90%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Safe (0–65%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" />Alert (65–90%)</span>
                     <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />Critical (&gt;90%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />Delayed</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" />Delayed</span>
                   </div>
                   <span className={`text-[11px] font-black text-white px-3 py-1 rounded-full shadow-sm ${labelColor}`}>
                     {label}
