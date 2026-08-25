@@ -24,6 +24,19 @@ html, body, #root {
   color: var(--pm-text);
 }
 
+/* Guarantee jet black text for all inputs and placeholders */
+input, textarea, select {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #475569 !important;
+  -webkit-text-fill-color: #475569 !important;
+  opacity: 1 !important;
+}
+
 /* Headings use Outfit for a clean, modern look */
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Outfit', sans-serif;
