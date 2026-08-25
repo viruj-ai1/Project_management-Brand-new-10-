@@ -88,7 +88,11 @@ export const AIInsights = () => {
     const fetchInsights = async () => {
       setIsLoading(true);
       try {
+<<<<<<< HEAD
       const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+=======
+        const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+>>>>>>> 7ce3b541fdc4664ef36a99970e28d06baa6b5efa
         const apiBase = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
         const response = await fetch(`${apiBase}/ai-insights`, {
           method: 'POST',
@@ -158,7 +162,11 @@ export const AIInsights = () => {
     setIsChatLoading(true);
 
     try {
+<<<<<<< HEAD
       const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+=======
+      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+>>>>>>> 7ce3b541fdc4664ef36a99970e28d06baa6b5efa
       const apiBase = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
       const response = await fetch(`${apiBase}/ai-chat`, {
         method: 'POST',
