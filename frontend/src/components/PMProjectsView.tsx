@@ -890,9 +890,24 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
 
   const [expandedSubtaskId, setExpandedSubtaskId] = useState<string | null>(null);
   const [expandedTaskLogId, setExpandedTaskLogId] = useState<string | null>(null);
+  const [editingParentTitle, setEditingParentTitle] = useState<string | null>(null);
+  const [parentTitleEditValue, setParentTitleEditValue] = useState<string>('');
   const [subtaskTabs, setSubtaskTabs] = useState<Record<string, 'list' | 'chart'>>({});
   const [bufferAllocateTask, setBufferAllocateTask] = useState<any>(null);
   const [bufferDaysInput, setBufferDaysInput] = useState<string>('');
+
+  const handleParentTitleSave = (oldParentTitle: string, tasksToUpdate: any[]) => {
+    const newTitle = parentTitleEditValue.trim();
+    if (newTitle && newTitle !== oldParentTitle) {
+      tasksToUpdate.forEach(t => {
+        const parts = t.title.split(' — ');
+        parts[0] = newTitle;
+        const updatedTitle = parts.join(' — ');
+        updateTask(t.id, { title: updatedTitle });
+      });
+    }
+    setEditingParentTitle(null);
+  };
 
   const modifyPredecessorOfAny = (targetId: string, predId: string, isAdd: boolean) => {
     const taskMatch = tasks.find((t: any) => String(t.id) === String(targetId));
@@ -1869,10 +1884,38 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                     <Card key={parentTitle} className="p-6 hover:border-gray-300 transition-all space-y-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-4">
                         <div className="flex-1">
-                          <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2 mb-2">
-                            <CheckSquare className="w-5 h-5 text-[#3b82f6]" />
-                            {parentTitle}
-                          </h4>
+                          {editingParentTitle === parentTitle && !readOnly ? (
+                            <div className="flex items-center gap-2 mb-2">
+                              <CheckSquare className="w-5 h-5 text-[#3b82f6]" />
+                              <input
+                                autoFocus
+                                className="text-lg font-extrabold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 outline-none w-full max-w-sm"
+                                value={parentTitleEditValue}
+                                onChange={(e) => setParentTitleEditValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleParentTitleSave(parentTitle, subtasksList);
+                                }}
+                                onBlur={() => handleParentTitleSave(parentTitle, subtasksList)}
+                              />
+                            </div>
+                          ) : (
+                            <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2 mb-2 group relative w-fit">
+                              <CheckSquare className="w-5 h-5 text-[#3b82f6]" />
+                              {parentTitle}
+                              {!readOnly && (
+                                <button
+                                  onClick={() => {
+                                    setEditingParentTitle(parentTitle);
+                                    setParentTitleEditValue(parentTitle);
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-blue-600 transition-all rounded-full hover:bg-blue-50 ml-1"
+                                  title="Edit Task Heading"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                </button>
+                              )}
+                            </h4>
+                          )}
                           <div className="flex flex-col gap-2 mt-2">
                             <div className="flex items-center gap-3">
                               <span className="text-xs font-semibold text-gray-500 w-36">Task Progress:</span>
