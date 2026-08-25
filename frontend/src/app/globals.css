@@ -12,15 +12,23 @@ body {
 }
 
 /* Guarantee jet black, 100% visible text for all inputs and placeholders */
-input, textarea, select {
+input, input:focus, input:active, textarea, textarea:focus, textarea:active, select {
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
   opacity: 1 !important;
+  caret-color: #000000 !important;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #000000 !important;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
 }
 
 input::placeholder, textarea::placeholder {
-  color: #475569 !important;
-  -webkit-text-fill-color: #475569 !important;
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
   opacity: 1 !important;
 }
 
