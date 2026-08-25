@@ -53,6 +53,7 @@ class Project(BaseModel):
     priority: Optional[str] = None
     businessCase: Optional[List[Dict[str, Any]]] = None
     rmList: Optional[List[Dict[str, Any]]] = None
+    rmStages: Optional[List[Dict[str, Any]]] = None
     clientId: Optional[str] = None
     clientName: Optional[str] = None
 
@@ -106,6 +107,7 @@ class ProjectUpdate(BaseModel):
     priority: Optional[str] = None
     businessCase: Optional[List[Dict[str, Any]]] = None
     rmList: Optional[List[Dict[str, Any]]] = None
+    rmStages: Optional[List[Dict[str, Any]]] = None
     clientId: Optional[str] = None
     clientName: Optional[str] = None
 

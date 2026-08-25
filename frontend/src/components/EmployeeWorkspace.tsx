@@ -1,5 +1,5 @@
 import { useState, useContext, useEffect, useMemo } from 'react';
-import { ChevronRight, FileText, AlertCircle, Activity, Users, Play, CheckCircle2, Circle, Zap, AlertTriangle, FolderKanban, Inbox, CheckSquare, X, Clock, Briefcase, Calendar } from 'lucide-react';
+import { ChevronRight, FileText, AlertCircle, Activity, Users, Play, CheckCircle2, Circle, Zap, AlertTriangle, FolderKanban, Inbox, CheckSquare, X, Clock, Briefcase, Calendar, Plus } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { ROLES, TASK_STATUS, addWorkingDays, getWorkingDaysElapsed } from '../constants';
 import { Card, StatCard } from './SharedUI';
@@ -129,6 +129,16 @@ const TaskWorkDetail = ({ task, onBack }: { task: any, onBack: () => void }) => 
     return Array(count).fill(false).map((_, i) => !!(task.taskDailyLogsCompleted || [])[i]);
   });
 
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState(task.title || "");
+
+  const handleTitleSave = () => {
+    if (editTitleValue.trim() && editTitleValue !== task.title) {
+      updateTask(task.id, { title: editTitleValue.trim() });
+    }
+    setIsEditingTitle(false);
+  };
+
   useEffect(() => {
     setDailyDescriptions(prev => {
       const next = [...prev];
@@ -243,6 +253,20 @@ const TaskWorkDetail = ({ task, onBack }: { task: any, onBack: () => void }) => 
       st.id.toString() === stId.toString() ? { ...st, [field]: value } : st
     );
     updateTask(task.id, { subtasks: updatedSubtasks });
+  };
+
+  const handleAddSubtask = () => {
+    const newSubtask = {
+      id: `st-${Date.now()}`,
+      title: 'New Subtask',
+      days: 1,
+      completed: false,
+      dailyLogs: [''],
+      dailyLogsCompleted: [false]
+    };
+    const updatedSubtasks = [...subtasks, newSubtask];
+    updateTask(task.id, { subtasks: updatedSubtasks });
+    setExpandedSubtaskId(newSubtask.id);
   };
 
   const handleAddActionPoint = (stId: any) => {
@@ -367,7 +391,35 @@ const TaskWorkDetail = ({ task, onBack }: { task: any, onBack: () => void }) => 
       <div className="bg-gray-50 border border-gray-200 text-gray-900 p-8 rounded-xl shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gray-300 rounded-full mix-blend-multiply filter blur-3xl opacity-5 -trangray-y-1/2 trangray-x-1/2"></div>
         <div className="uppercase tracking-wider text-gray-500 text-xs font-bold mb-2">Active Work Session</div>
-        <h2 className="text-3xl font-black mb-3 text-gray-900">{task.title}</h2>
+        
+        {isEditingTitle ? (
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="text"
+              autoFocus
+              className="text-3xl font-black text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 outline-none w-full max-w-2xl"
+              value={editTitleValue}
+              onChange={(e) => setEditTitleValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
+              onBlur={handleTitleSave}
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-3xl font-black text-gray-900">{task.title}</h2>
+            <button
+              onClick={() => {
+                setEditTitleValue(task.title);
+                setIsEditingTitle(true);
+              }}
+              className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors rounded-full hover:bg-blue-50"
+              title="Edit Task Title"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
           <span>Project: <strong className="text-gray-900">{proj?.name}</strong></span>
           {startDate && <span>Start: <strong className="text-gray-900">{startDate.toLocaleDateString()}</strong></span>}
@@ -592,10 +644,18 @@ const TaskWorkDetail = ({ task, onBack }: { task: any, onBack: () => void }) => 
 
       {/* Subtasks Section */}
       <Card className="p-6">
-        <h3 className="font-bold text-xl text-gray-900 mb-5 flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-gray-500" />
-          {subtasks.length === 0 ? 'Day-to-Day Tracking' : 'Subtasks'}
-        </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
+          <h3 className="font-bold text-xl text-gray-900 flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-gray-500" />
+            {subtasks.length === 0 ? 'Day-to-Day Tracking' : 'Subtasks'}
+          </h3>
+          <button
+            onClick={handleAddSubtask}
+            className="shrink-0 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-blue-200 transition-all flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" /> Add Subtask
+          </button>
+        </div>
 
         {subtasks.length === 0 ? (
           /* ── No subtasks: show task-level day-by-day tracker ── */
