@@ -200,7 +200,7 @@ const MainApp = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
             }}>
-              <img src={logoImg} alt="Viruj Chematrix" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
+              <img src={logoImg.src} alt="Viruj Chematrix" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
             </div>
             {!collapsed && (
               <div style={{ overflow: 'hidden' }}>

@@ -2,7 +2,7 @@ import React, { useState, createContext, useEffect } from 'react';
 import axios from 'axios';
 
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") || 'http://localhost:5000/api';
 
 export const AppContext = createContext<any>(null);
 

@@ -33,7 +33,7 @@ export const LoginScreen = () => {
     setIsLoading(true);
     try {
       const trimmed = username.trim();
-      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") || 'http://localhost:5000/api';
       const res = await axios.post(`${apiBase}/login`, {
         username: trimmed,
         password: password
@@ -59,7 +59,7 @@ export const LoginScreen = () => {
 
       <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <img src={logoImg} alt="Viruj Chematrix" className="h-9 w-auto object-contain flex-shrink-0 max-w-[36px]" />
+          <img src={logoImg.src} alt="Viruj Chematrix" className="h-9 w-auto object-contain flex-shrink-0 max-w-[36px]" />
           <span className="text-lg font-bold text-[#1e3a5f] tracking-tight font-outfit">Viruj Chematrix</span>
         </div>
         <div className="flex items-center gap-2 px-3.5 py-1.5 bg-blue-50 text-[#3b82f6] rounded-full text-xs font-semibold border border-blue-100">
@@ -73,7 +73,7 @@ export const LoginScreen = () => {
           <div className="hidden md:flex flex-col justify-center items-center p-12 bg-white border-r border-gray-100">
             <div className="flex flex-col items-center text-center">
               <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm mb-6">
-                <img src={logoImg} alt="Viruj Chematrix" className="w-14 h-14 object-contain" />
+                <img src={logoImg.src} alt="Viruj Chematrix" className="w-14 h-14 object-contain" />
               </div>
               <h1 className="text-2xl font-extrabold text-[#1e3a5f] mb-1 leading-tight font-outfit">Viruj Chematrix</h1>
               <p className="text-[#3b82f6] text-sm font-semibold mb-8">Project Management Portal</p>
