@@ -3312,7 +3312,7 @@ const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) =
     <Card className="p-6 bg-white overflow-hidden flex flex-col space-y-6 shadow-sm border border-gray-100 rounded-2xl animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
         <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
-          <FolderKanban className="w-5 h-5 text-[#3b82f6]" /> Raw Material Stages
+          <FolderKanban className="w-5 h-5 text-[#3b82f6]" /> Raw Materials List
         </h3>
         <div className="flex flex-wrap items-center gap-2">
           <button
