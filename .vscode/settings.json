@@ -1,0 +1,20 @@
+{
+  "files.exclude": {
+    "**/frontend-old": true,
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/__pyrefly_virtual__": true
+  },
+  "search.exclude": {
+    "**/frontend-old": true,
+    "**/__pyrefly_virtual__": true
+  },
+  "typescript.tsserver.exclude": [
+    "**/frontend-old/**"
+  ],
+  "python.analysis.ignore": [
+    "**/__pyrefly_virtual__/**"
+  ],
+  "pyrefly.diagnostics.enable": false,
+  "pyrefly.enable": false
+}
