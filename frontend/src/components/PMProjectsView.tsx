@@ -899,6 +899,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   const [bufferDaysInput, setBufferDaysInput] = useState<string>('');
 
   const handleParentTitleSave = (oldParentTitle: string, tasksToUpdate: any[]) => {
+    if (!editingParentTitle) return;
     const newTitle = parentTitleEditValue.trim();
     if (newTitle && newTitle !== oldParentTitle) {
       tasksToUpdate.forEach(t => {
@@ -912,8 +913,9 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   };
 
   const handleNestedSubtaskTitleSave = (task: any) => {
+    if (!editingNestedSubtaskId) return;
     const newTitle = subtaskTitleEditValue.trim();
-    if (newTitle && editingNestedSubtaskId) {
+    if (newTitle) {
       const newSubtasks = (task.subtasks || []).map((st: any) => 
         st.id === editingNestedSubtaskId ? { ...st, title: newTitle } : st
       );

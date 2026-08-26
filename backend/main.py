@@ -73,6 +73,9 @@ class Task(BaseModel):
     subtasks: Optional[List[Dict[str, Any]]] = None
 
 class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    specs: Optional[str] = None
+    projectId: Optional[str] = None
     status: Optional[str] = None
     assignedTo: Optional[Any] = None
     subtasks: Optional[List[Dict[str, Any]]] = None
@@ -81,7 +84,9 @@ class TaskUpdate(BaseModel):
     originalEstimate: Optional[float] = None
     finalTotalDays: Optional[int] = None
     assignedDays: Optional[int] = None
+    plannedBufferDays: Optional[int] = None
     bufferDays: Optional[int] = None
+    bufferConsumed: Optional[int] = None
     predecessors: Optional[List[str]] = None
     startedAt: Optional[str] = None
     completedAt: Optional[str] = None
@@ -99,6 +104,9 @@ class TaskUpdate(BaseModel):
     prerequisitesChecklist: Optional[List[Dict[str, Any]]] = None
 
 class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    title: Optional[str] = None
+    code: Optional[str] = None
     bufferPool: Optional[int] = None
     status: Optional[str] = None
     description: Optional[str] = None
@@ -468,13 +476,17 @@ async def update_project(project_id: str, update: ProjectUpdate):
     if res:
         if res.get("deadline") and hasattr(res["deadline"], "isoformat"):
             res["deadline"] = res["deadline"].isoformat()
-        res["pmId"] = res.pop("pm_id")
-        res["bufferPool"] = res.pop("buffer_pool")
-        res["clientId"] = res.pop("client_id")
-        res["clientName"] = res.pop("client_name")
-        res["businessCase"] = res.pop("business_case")
-        res["rmList"] = res.pop("rm_list")
+        res["pmId"] = res.pop("pm_id", None)
+        res["bufferPool"] = res.pop("buffer_pool", None)
+        res["clientId"] = res.pop("client_id", None)
+        res["clientName"] = res.pop("client_name", None)
+        res["businessCase"] = res.pop("business_case", None)
+        res["rmList"] = res.pop("rm_list", None)
         return res
+    import db_adapter as dba
+    updated_p = dba.update_project(project_id, updates)
+    if updated_p:
+        return updated_p
     raise HTTPException(status_code=404, detail="Project not found")
 
 @app.get("/api/tasks")
@@ -537,6 +549,11 @@ async def update_task(task_id: str, update: TaskUpdate):
         res = fetch_one("SELECT * FROM public.tasks WHERE id = %s;", (task_id,))
         if res:
             return map_db_task_to_frontend(res)
+        import db_adapter as dba
+        tasks = dba.get_tasks()
+        for t in tasks:
+            if t["id"] == task_id:
+                return t
         raise HTTPException(status_code=404, detail="Task not found")
     db_task = map_frontend_task_to_db(updates)
     set_clauses = []
@@ -554,6 +571,10 @@ async def update_task(task_id: str, update: TaskUpdate):
     res = execute_query(query, tuple(params), returning=True)
     if res:
         return map_db_task_to_frontend(res)
+    import db_adapter as dba
+    updated_t = dba.update_task(task_id, updates)
+    if updated_t:
+        return updated_t
     raise HTTPException(status_code=404, detail="Task not found")
 
 class AIInsightsRequest(BaseModel):
