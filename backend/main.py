@@ -19,6 +19,17 @@ import bcrypt
 
 app = FastAPI()
 
+@app.on_event("startup")
+def startup_event():
+    try:
+        execute_query("ALTER TABLE public.projects ADD COLUMN projected_start VARCHAR;", returning=False)
+    except Exception as e:
+        print("Migration projected_start:", e)
+    try:
+        execute_query("ALTER TABLE public.projects ADD COLUMN projected_end VARCHAR;", returning=False)
+    except Exception as e:
+        print("Migration projected_end:", e)
+
 cors_origins_env = os.environ.get("CORS_ORIGINS", "")
 origins = [origin.strip() for origin in cors_origins_env.split(",")] if cors_origins_env else ["*"]
 
