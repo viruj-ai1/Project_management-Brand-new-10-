@@ -376,7 +376,7 @@ async def get_projects():
     """)
     for p in projects:
         if p.get("deadline"):
-            p["deadline"] = p["deadline"].isoformat()
+            p["deadline"] = p["deadline"].isoformat() if hasattr(p["deadline"], "isoformat") else str(p["deadline"])
         p["pmId"] = p.pop("pm_id")
         p["bufferPool"] = p.pop("buffer_pool")
         p["clientId"] = p.pop("client_id")
@@ -427,7 +427,7 @@ async def create_project(project: Project):
     ), returning=True)
     if res:
         if res.get("deadline"):
-            res["deadline"] = res["deadline"].isoformat()
+            res["deadline"] = res["deadline"].isoformat() if hasattr(res["deadline"], "isoformat") else str(res["deadline"])
         res["pmId"] = res.pop("pm_id")
         res["bufferPool"] = res.pop("buffer_pool")
         res["clientId"] = res.pop("client_id")
@@ -484,7 +484,7 @@ async def update_project(project_id: str, update: ProjectUpdate):
     res = execute_query(query, tuple(params), returning=True)
     if res:
         if res.get("deadline"):
-            res["deadline"] = res["deadline"].isoformat()
+            res["deadline"] = res["deadline"].isoformat() if hasattr(res["deadline"], "isoformat") else str(res["deadline"])
         res["pmId"] = res.pop("pm_id")
         res["bufferPool"] = res.pop("buffer_pool")
         res["clientId"] = res.pop("client_id")
