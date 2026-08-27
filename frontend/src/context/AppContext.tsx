@@ -127,11 +127,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateProject = async (projectId: string, projectUpdates: any) => {
+    // Optimistic update
+    const previousProjects = [...projects];
+    setProjects(projects.map(p => p.id === projectId ? { ...p, ...projectUpdates } : p));
     try {
       const res = await axios.put(`${API_BASE}/projects/${projectId}`, projectUpdates);
-      setProjects(projects.map(p => p.id === projectId ? res.data : p));
+      setProjects(projects => projects.map(p => p.id === projectId ? res.data : p));
     } catch (error) {
       console.error('Error updating project:', error);
+      // Revert on error
+      setProjects(previousProjects);
     }
   };
 

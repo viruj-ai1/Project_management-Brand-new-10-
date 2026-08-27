@@ -1091,6 +1091,11 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
         const newDeadline = new Date(oldDeadline.getTime() + diffDays * (1000 * 60 * 60 * 24));
         updates.deadline = newDeadline.toISOString().split('T')[0];
       }
+      if (proj.projectedEnd) {
+        const oldProjectedEnd = new Date(proj.projectedEnd);
+        const newProjectedEnd = new Date(oldProjectedEnd.getTime() + diffDays * (1000 * 60 * 60 * 24));
+        updates.projectedEnd = newProjectedEnd.toISOString().split('T')[0];
+      }
       updateProject(proj.id, updates);
       alert(`Shifted projected start by ${diffDays} days. Project tasks and deadline have been updated.`);
     };
