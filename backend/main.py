@@ -111,6 +111,7 @@ class TaskUpdate(BaseModel):
     prerequisitesChecklist: Optional[List[Dict[str, Any]]] = None
 
 class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
     bufferPool: Optional[int] = None
     status: Optional[str] = None
     description: Optional[str] = None
