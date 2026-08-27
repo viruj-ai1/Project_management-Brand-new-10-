@@ -9,9 +9,8 @@ from groq import Groq
 
 load_dotenv()
 
-# Initialize Groq client conditionally
-groq_api_key = os.environ.get("GROQ_API_KEY")
-groq_client = Groq(api_key=groq_api_key) if groq_api_key else None
+# Initialize Groq client
+groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 from utils.file_storage import read_data, write_data
 from utils.db import fetch_all, fetch_one, execute_query
@@ -57,6 +56,8 @@ class Project(BaseModel):
     rmStages: Optional[List[Dict[str, Any]]] = None
     clientId: Optional[str] = None
     clientName: Optional[str] = None
+    projectedStart: Optional[str] = None
+    projectedEnd: Optional[str] = None
 
 class Task(BaseModel):
     title: str
@@ -73,9 +74,6 @@ class Task(BaseModel):
     subtasks: Optional[List[Dict[str, Any]]] = None
 
 class TaskUpdate(BaseModel):
-    title: Optional[str] = None
-    specs: Optional[str] = None
-    projectId: Optional[str] = None
     status: Optional[str] = None
     assignedTo: Optional[Any] = None
     subtasks: Optional[List[Dict[str, Any]]] = None
@@ -84,9 +82,7 @@ class TaskUpdate(BaseModel):
     originalEstimate: Optional[float] = None
     finalTotalDays: Optional[int] = None
     assignedDays: Optional[int] = None
-    plannedBufferDays: Optional[int] = None
     bufferDays: Optional[int] = None
-    bufferConsumed: Optional[int] = None
     predecessors: Optional[List[str]] = None
     startedAt: Optional[str] = None
     completedAt: Optional[str] = None
@@ -104,9 +100,6 @@ class TaskUpdate(BaseModel):
     prerequisitesChecklist: Optional[List[Dict[str, Any]]] = None
 
 class ProjectUpdate(BaseModel):
-    name: Optional[str] = None
-    title: Optional[str] = None
-    code: Optional[str] = None
     bufferPool: Optional[int] = None
     status: Optional[str] = None
     description: Optional[str] = None
@@ -119,6 +112,8 @@ class ProjectUpdate(BaseModel):
     rmStages: Optional[List[Dict[str, Any]]] = None
     clientId: Optional[str] = None
     clientName: Optional[str] = None
+    projectedStart: Optional[str] = None
+    projectedEnd: Optional[str] = None
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -376,11 +371,11 @@ async def get_projects():
     projects = fetch_all("""
         SELECT id, name, deadline, pm_id, status, buffer_pool, 
                description, category, priority, client_id, client_name, 
-               business_case, rm_list
+               business_case, rm_list, projected_start, projected_end
         FROM public.projects;
     """)
     for p in projects:
-        if p.get("deadline") and hasattr(p["deadline"], "isoformat"):
+        if p.get("deadline"):
             p["deadline"] = p["deadline"].isoformat()
         p["pmId"] = p.pop("pm_id")
         p["bufferPool"] = p.pop("buffer_pool")
@@ -388,6 +383,16 @@ async def get_projects():
         p["clientName"] = p.pop("client_name")
         p["businessCase"] = p.pop("business_case")
         p["rmList"] = p.pop("rm_list")
+        if p.get("projected_start"): 
+            p["projectedStart"] = p["projected_start"].isoformat() if hasattr(p["projected_start"], "isoformat") else str(p["projected_start"])
+        else: 
+            p["projectedStart"] = None
+        p.pop("projected_start", None)
+        if p.get("projected_end"): 
+            p["projectedEnd"] = p["projected_end"].isoformat() if hasattr(p["projected_end"], "isoformat") else str(p["projected_end"])
+        else: 
+            p["projectedEnd"] = None
+        p.pop("projected_end", None)
     return projects
 
 @app.post("/api/projects")
@@ -397,11 +402,11 @@ async def create_project(project: Project):
         INSERT INTO public.projects (
             id, name, deadline, pm_id, status, buffer_pool, 
             description, category, priority, client_id, client_name, 
-            business_case, rm_list
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            business_case, rm_list, projected_start, projected_end
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id, name, deadline, pm_id, status, buffer_pool, 
                   description, category, priority, client_id, client_name, 
-                  business_case, rm_list;
+                  business_case, rm_list, projected_start, projected_end;
     """
     res = execute_query(query, (
         proj_id,
@@ -416,10 +421,12 @@ async def create_project(project: Project):
         project.clientId,
         project.clientName,
         Json(project.businessCase) if project.businessCase is not None else None,
-        Json(project.rmList) if project.rmList is not None else None
+        Json(project.rmList) if project.rmList is not None else None,
+        project.projectedStart,
+        project.projectedEnd
     ), returning=True)
     if res:
-        if res.get("deadline") and hasattr(res["deadline"], "isoformat"):
+        if res.get("deadline"):
             res["deadline"] = res["deadline"].isoformat()
         res["pmId"] = res.pop("pm_id")
         res["bufferPool"] = res.pop("buffer_pool")
@@ -436,7 +443,7 @@ async def update_project(project_id: str, update: ProjectUpdate):
     if not updates:
         res = fetch_one("SELECT * FROM public.projects WHERE id = %s;", (project_id,))
         if res:
-            if res.get("deadline") and hasattr(res["deadline"], "isoformat"):
+            if res.get("deadline"):
                 res["deadline"] = res["deadline"].isoformat()
             res["pmId"] = res.pop("pm_id")
             res["bufferPool"] = res.pop("buffer_pool")
@@ -454,7 +461,9 @@ async def update_project(project_id: str, update: ProjectUpdate):
         "clientId": "client_id",
         "clientName": "client_name",
         "businessCase": "business_case",
-        "rmList": "rm_list"
+        "rmList": "rm_list",
+        "projectedStart": "projected_start",
+        "projectedEnd": "projected_end"
     }
     for k, v in updates.items():
         db_key = key_mapping.get(k, k)
@@ -470,23 +479,29 @@ async def update_project(project_id: str, update: ProjectUpdate):
         WHERE id = %s
         RETURNING id, name, deadline, pm_id, status, buffer_pool, 
                   description, category, priority, client_id, client_name, 
-                  business_case, rm_list;
+                  business_case, rm_list, projected_start, projected_end;
     """
     res = execute_query(query, tuple(params), returning=True)
     if res:
-        if res.get("deadline") and hasattr(res["deadline"], "isoformat"):
+        if res.get("deadline"):
             res["deadline"] = res["deadline"].isoformat()
-        res["pmId"] = res.pop("pm_id", None)
-        res["bufferPool"] = res.pop("buffer_pool", None)
-        res["clientId"] = res.pop("client_id", None)
-        res["clientName"] = res.pop("client_name", None)
-        res["businessCase"] = res.pop("business_case", None)
-        res["rmList"] = res.pop("rm_list", None)
+        res["pmId"] = res.pop("pm_id")
+        res["bufferPool"] = res.pop("buffer_pool")
+        res["clientId"] = res.pop("client_id")
+        res["clientName"] = res.pop("client_name")
+        res["businessCase"] = res.pop("business_case")
+        res["rmList"] = res.pop("rm_list")
+        if res.get("projected_start"): 
+            res["projectedStart"] = res["projected_start"].isoformat() if hasattr(res["projected_start"], "isoformat") else str(res["projected_start"])
+        else: 
+            res["projectedStart"] = None
+        res.pop("projected_start", None)
+        if res.get("projected_end"): 
+            res["projectedEnd"] = res["projected_end"].isoformat() if hasattr(res["projected_end"], "isoformat") else str(res["projected_end"])
+        else: 
+            res["projectedEnd"] = None
+        res.pop("projected_end", None)
         return res
-    import db_adapter as dba
-    updated_p = dba.update_project(project_id, updates)
-    if updated_p:
-        return updated_p
     raise HTTPException(status_code=404, detail="Project not found")
 
 @app.get("/api/tasks")
@@ -549,11 +564,6 @@ async def update_task(task_id: str, update: TaskUpdate):
         res = fetch_one("SELECT * FROM public.tasks WHERE id = %s;", (task_id,))
         if res:
             return map_db_task_to_frontend(res)
-        import db_adapter as dba
-        tasks = dba.get_tasks()
-        for t in tasks:
-            if t["id"] == task_id:
-                return t
         raise HTTPException(status_code=404, detail="Task not found")
     db_task = map_frontend_task_to_db(updates)
     set_clauses = []
@@ -571,10 +581,6 @@ async def update_task(task_id: str, update: TaskUpdate):
     res = execute_query(query, tuple(params), returning=True)
     if res:
         return map_db_task_to_frontend(res)
-    import db_adapter as dba
-    updated_t = dba.update_task(task_id, updates)
-    if updated_t:
-        return updated_t
     raise HTTPException(status_code=404, detail="Task not found")
 
 class AIInsightsRequest(BaseModel):
@@ -756,38 +762,8 @@ Rules:
         
         return chat_completion.choices[0].message.content
     except Exception as e:
-        print(f"Error generating AI insights (falling back to rule engine): {e}")
-        in_progress = [t for t in req.tasks if t.get("status") == "In Progress"]
-        pending = [t for t in req.tasks if t.get("status") == "Pending Start"]
-        completed = [t for t in req.tasks if t.get("status") == "Completed"]
-        
-        action_items = []
-        if in_progress:
-            action_items.append({
-                "type": "warning",
-                "text": f"Active execution in progress on '{in_progress[0].get('title', 'Primary Task')}'. Ensure analytical resources and buffer days are monitored."
-            })
-        if completed:
-            action_items.append({
-                "type": "success",
-                "text": f"Successfully completed '{completed[0].get('title', 'Prerequisite Task')}'. Successor activities can proceed without delay."
-            })
-        if pending:
-            action_items.append({
-                "type": "info",
-                "text": f"Next up: '{pending[0].get('title', 'Upcoming Task')}' is pending start. Verify raw materials and instrument availability."
-            })
-        if not action_items:
-            action_items.append({
-                "type": "info",
-                "text": f"All {len(req.projects)} project(s) and {len(req.tasks)} task(s) in {req.departmentName} are aligned."
-            })
-            
-        import json
-        return json.dumps({
-            "summaryText": f"Portfolio analysis for {req.departmentName}: Currently tracking {len(req.projects)} project(s) and {len(req.tasks)} task(s) with {len(in_progress)} in active execution.",
-            "actionItems": action_items
-        })
+        print(f"Error generating AI insights: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate AI insights")
 
 class AIChatRequest(BaseModel):
     departmentName: str
@@ -798,57 +774,39 @@ class AIChatRequest(BaseModel):
 
 @app.post("/api/ai-chat")
 async def handle_ai_chat(req: AIChatRequest):
-    if groq_client:
-        try:
-            context_str = f"Department/Context: {req.departmentName}\nOverall View: {req.isOverall}\n"
-            context_str += f"Total Projects Context: {len(req.projects)}\n"
-            context_str += f"Total Tasks Context: {len(req.tasks)}\n\n"
+    try:
+        context_str = f"Department/Context: {req.departmentName}\nOverall View: {req.isOverall}\n"
+        context_str += f"Total Projects Context: {len(req.projects)}\n"
+        context_str += f"Total Tasks Context: {len(req.tasks)}\n\n"
+        
+        context_str += "Recent/Active Tasks:\n"
+        for t in req.tasks[:30]:
+            status = t.get('status', 'Unknown')
+            title = t.get('title', 'Untitled')
+            context_str += f"- {title} ({status})\n"
             
-            context_str += "Recent/Active Tasks:\n"
-            for t in req.tasks[:30]:
-                status = t.get('status', 'Unknown')
-                title = t.get('title', 'Untitled')
-                context_str += f"- {title} ({status})\n"
-                
-            system_prompt = f"""You are an AI Project Management Assistant named Viruj AI. 
+        system_prompt = f"""You are an AI Project Management Assistant named Viruj AI. 
 Answer the user's questions based on the following context. 
 If the user asks something outside the scope of project management or these tasks, politely decline.
 Be concise and helpful.
 
 Context:
 {context_str}"""
-            
-            messages = [{"role": "system", "content": system_prompt}]
-            messages.extend(req.messages)
+        
+        # Prepare messages
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(req.messages)
 
-            chat_completion = groq_client.chat.completions.create(
-                messages=messages,
-                model="llama-3.3-70b-versatile",
-                temperature=0.5
-            )
-            
-            return {"response": chat_completion.choices[0].message.content}
-        except Exception as e:
-            print(f"Groq API call error: {e}, falling back to intelligent assistant response")
-
-    # Smart contextual fallback when Groq API key is missing or offline
-    user_query = req.messages[-1]["content"] if req.messages else ""
-    in_progress = [t for t in req.tasks if t.get("status") == "In Progress"]
-    pending = [t for t in req.tasks if t.get("status") == "Pending Start"]
-    completed = [t for t in req.tasks if t.get("status") == "Completed"]
-    
-    reply = f"I've analyzed your query regarding **{req.departmentName}**.\n\n"
-    reply += f"📊 **Portfolio Summary**:\n"
-    reply += f"• **Projects Tracked**: {len(req.projects)}\n"
-    reply += f"• **Active Tasks In Progress**: {len(in_progress)}\n"
-    reply += f"• **Pending Tasks**: {len(pending)}\n"
-    reply += f"• **Completed Tasks**: {len(completed)}\n\n"
-    
-    if in_progress:
-        reply += f"💡 **Current Priority**: '{in_progress[0].get('title')}' is active.\n"
-    
-    reply += "How else can I assist you with project schedules, resource allocations, or task assignments?"
-    return {"response": reply}
+        chat_completion = groq_client.chat.completions.create(
+            messages=messages,
+            model="llama-3.3-70b-versatile",
+            temperature=0.5
+        )
+        
+        return {"response": chat_completion.choices[0].message.content}
+    except Exception as e:
+        print(f"Error in AI chat: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate AI response")
 
 if __name__ == "__main__":
 

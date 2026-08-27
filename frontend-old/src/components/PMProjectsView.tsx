@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   FolderKanban, ChevronRight, ChevronDown, Clock, ShieldAlert, CheckSquare,
   Send, UserSquare2, Activity, AlertCircle, CheckCircle,
-  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles, Edit2
+  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles
 } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { TASK_STATUS, ROLES, computeDynamicBufferPool, addWorkingDays, isRestDay, getWorkingDaysElapsed } from '../constants';
@@ -807,11 +807,6 @@ export const useAllTaskDates = (tasks: any[], projects: any[]) => {
 
     const getProjectStart = (projectId: string) => {
       const p = projects.find((p: any) => p.id === projectId);
-      if (p?.projectedStart) {
-        const d = new Date(p.projectedStart);
-        d.setHours(0, 0, 0, 0);
-        return d;
-      }
       if (p?.createdAt) {
         const d = new Date(p.createdAt);
         d.setHours(0, 0, 0, 0);
@@ -895,39 +890,9 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
 
   const [expandedSubtaskId, setExpandedSubtaskId] = useState<string | null>(null);
   const [expandedTaskLogId, setExpandedTaskLogId] = useState<string | null>(null);
-  const [editingParentTitle, setEditingParentTitle] = useState<string | null>(null);
-  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
-  const [editProjectNameValue, setEditProjectNameValue] = useState('');
-  const [parentTitleEditValue, setParentTitleEditValue] = useState<string>('');
-  const [editingNestedSubtaskId, setEditingNestedSubtaskId] = useState<string | null>(null);
-  const [subtaskTitleEditValue, setSubtaskTitleEditValue] = useState<string>('');
   const [subtaskTabs, setSubtaskTabs] = useState<Record<string, 'list' | 'chart'>>({});
   const [bufferAllocateTask, setBufferAllocateTask] = useState<any>(null);
   const [bufferDaysInput, setBufferDaysInput] = useState<string>('');
-
-  const handleParentTitleSave = (oldParentTitle: string, tasksToUpdate: any[]) => {
-    const newTitle = parentTitleEditValue.trim();
-    if (newTitle && newTitle !== oldParentTitle) {
-      tasksToUpdate.forEach(t => {
-        const parts = t.title.split(' — ');
-        parts[0] = newTitle;
-        const updatedTitle = parts.join(' — ');
-        updateTask(t.id, { title: updatedTitle });
-      });
-    }
-    setEditingParentTitle(null);
-  };
-
-  const handleNestedSubtaskTitleSave = (task: any) => {
-    const newTitle = subtaskTitleEditValue.trim();
-    if (newTitle && editingNestedSubtaskId) {
-      const newSubtasks = (task.subtasks || []).map((st: any) => 
-        st.id === editingNestedSubtaskId ? { ...st, title: newTitle } : st
-      );
-      updateTask(task.id, { subtasks: newSubtasks });
-    }
-    setEditingNestedSubtaskId(null);
-  };
 
   const modifyPredecessorOfAny = (targetId: string, predId: string, isAdd: boolean) => {
     const taskMatch = tasks.find((t: any) => String(t.id) === String(targetId));
@@ -1058,50 +1023,6 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
     const projTasks = tasks.filter((t: any) => t.projectId === proj.id);
     const approvedTasks = projTasks.filter((t: any) => t.status === TASK_STATUS.PENDING_START).length;
     const totalAssignedDays = projTasks.reduce((s: number, t: any) => s + (t.assignedDays || 0), 0);
-
-    // Project Dynamic Dates
-    let projectDynamicStart: Date | null = null;
-    let projectDynamicEnd: Date | null = null;
-    
-    if (projTasks.length > 0) {
-      projTasks.forEach((t: any) => {
-        const dates = allTaskDates[t.id];
-        if (dates) {
-          if (!projectDynamicStart || dates.start < projectDynamicStart) projectDynamicStart = dates.start;
-          if (!projectDynamicEnd || dates.end > projectDynamicEnd) projectDynamicEnd = dates.end;
-        }
-      });
-    }
-
-    const formatDate = (d: Date | null) => d ? d.toISOString().split('T')[0] : 'N/A';
-
-    const handleProjectedStartChange = (newDateStr: string) => {
-      if (!proj.projectedStart) {
-        updateProject(proj.id, { projectedStart: newDateStr });
-        return;
-      }
-      const oldStart = new Date(proj.projectedStart);
-      const newStart = new Date(newDateStr);
-      const diffTime = newStart.getTime() - oldStart.getTime();
-      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-      
-      const updates: any = { projectedStart: newDateStr };
-      if (proj.deadline) {
-        const oldDeadline = new Date(proj.deadline);
-        const newDeadline = new Date(oldDeadline.getTime() + diffDays * (1000 * 60 * 60 * 24));
-        updates.deadline = newDeadline.toISOString().split('T')[0];
-      }
-      updateProject(proj.id, updates);
-      alert(`Shifted projected start by ${diffDays} days. Project tasks and deadline have been updated.`);
-    };
-
-    const handleProjectedEndChange = (newDateStr: string) => {
-      if (proj.projectedStart && new Date(newDateStr) < new Date(proj.projectedStart)) {
-        alert("Projected End Date cannot be earlier than Projected Start Date!");
-        return;
-      }
-      updateProject(proj.id, { projectedEnd: newDateStr });
-    };
 
     // Group all tasks by parent title
     const groupedForProjectProgress: Record<string, any[]> = {};
@@ -1347,62 +1268,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 mb-2">
-              {isEditingProjectName ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={editProjectNameValue}
-                    onChange={(e) => setEditProjectNameValue(e.target.value)}
-                    className="text-3xl font-black tracking-tight bg-white/10 border border-white/30 rounded-lg px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 w-auto min-w-[300px]"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        if (editProjectNameValue.trim()) {
-                          updateProject(proj.id, { name: editProjectNameValue.trim() });
-                        }
-                        setIsEditingProjectName(false);
-                      } else if (e.key === 'Escape') {
-                        setIsEditingProjectName(false);
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => {
-                      if (editProjectNameValue.trim()) {
-                        updateProject(proj.id, { name: editProjectNameValue.trim() });
-                      }
-                      setIsEditingProjectName(false);
-                    }}
-                    className="bg-green-500 hover:bg-green-600 p-1.5 rounded-lg text-white"
-                  >
-                    <CheckSquare className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setIsEditingProjectName(false)}
-                    className="bg-red-500 hover:bg-red-600 p-1.5 rounded-lg text-white"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <h2 className="text-3xl font-black tracking-tight">{proj.name}</h2>
-                  {!readOnly && (
-                    <button
-                      onClick={() => {
-                        setEditProjectNameValue(proj.name);
-                        setIsEditingProjectName(true);
-                      }}
-                      className="text-white/50 hover:text-white transition-colors p-1"
-                      title="Edit Project Name"
-                    >
-                      <Edit2 className="w-5 h-5" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
+            <h2 className="text-3xl font-black mb-2 tracking-tight">{proj.name}</h2>
             {proj.description && <p className="text-blue-200 text-sm max-w-2xl leading-relaxed">{proj.description}</p>}
 
             <div className="flex flex-wrap gap-6 mt-6 text-sm text-blue-200">
@@ -1429,7 +1295,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                   <input
                     type="date"
                     value={proj.projectedStart || ''}
-                    onChange={e => handleProjectedStartChange(e.target.value)}
+                    onChange={e => updateProject(proj.id, { projectedStart: e.target.value })}
                     className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer [color-scheme:dark]"
                     title="Set Projected Start Date"
                   />
@@ -1445,22 +1311,11 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                   <input
                     type="date"
                     value={proj.projectedEnd || ''}
-                    onChange={e => handleProjectedEndChange(e.target.value)}
+                    onChange={e => updateProject(proj.id, { projectedEnd: e.target.value })}
                     className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer [color-scheme:dark]"
                     title="Set Projected End Date"
                   />
                 )}
-              </div>
-              {/* Dynamic Dates */}
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-amber-300" />
-                <span>Dynamic Start:</span>
-                <strong className="text-white">{formatDate(projectDynamicStart)}</strong>
-              </div>
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-amber-300" />
-                <span>Dynamic End:</span>
-                <strong className="text-white">{formatDate(projectDynamicEnd)}</strong>
               </div>
             </div>
           </div>
@@ -1474,11 +1329,10 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
         </div>
 
         {/* Summary stat cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard title="Total Tasks" value={projTasks.length} icon={CheckSquare} colorClass="bg-gray-100 text-gray-600" />
           <StatCard title="Target Tasks" value={approvedTasks} icon={CheckCircle} colorClass="bg-green-100 text-green-600" />
           <StatCard title="Days Assigned" value={`${totalAssignedDays}d`} icon={Clock} colorClass="bg-blue-50 text-[#3b82f6]" />
-          <StatCard title="Delayed Tasks" value={projTasks.filter((t: any) => t.status === 'Delayed').length} icon={AlertTriangle} colorClass="bg-red-50 text-red-600" />
         </div>
 
         {/* Progress */}
@@ -2014,38 +1868,10 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                     <Card key={parentTitle} className="p-6 hover:border-gray-300 transition-all space-y-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-4">
                         <div className="flex-1">
-                          {editingParentTitle === parentTitle && !readOnly ? (
-                            <div className="flex items-center gap-2 mb-2">
-                              <CheckSquare className="w-5 h-5 text-[#3b82f6]" />
-                              <input
-                                autoFocus
-                                className="text-lg font-extrabold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 outline-none w-full max-w-sm"
-                                value={parentTitleEditValue}
-                                onChange={(e) => setParentTitleEditValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleParentTitleSave(parentTitle, subtasksList);
-                                }}
-                                onBlur={() => handleParentTitleSave(parentTitle, subtasksList)}
-                              />
-                            </div>
-                          ) : (
-                            <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2 mb-2 group relative w-fit">
-                              <CheckSquare className="w-5 h-5 text-[#3b82f6]" />
-                              {parentTitle}
-                              {!readOnly && (
-                                <button
-                                  onClick={() => {
-                                    setEditingParentTitle(parentTitle);
-                                    setParentTitleEditValue(parentTitle);
-                                  }}
-                                  className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-blue-600 transition-all rounded-full hover:bg-blue-50 ml-1"
-                                  title="Edit Task Heading"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                                </button>
-                              )}
-                            </h4>
-                          )}
+                          <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2 mb-2">
+                            <CheckSquare className="w-5 h-5 text-[#3b82f6]" />
+                            {parentTitle}
+                          </h4>
                           <div className="flex flex-col gap-2 mt-2">
                             <div className="flex items-center gap-3">
                               <span className="text-xs font-semibold text-gray-500 w-36">Task Progress:</span>
@@ -2150,55 +1976,6 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                       </button>
                                     )}
                                   </div>
-
-                                  {!readOnly && (
-                                    <div className="mb-3 space-y-2">
-                                      {task.subtasks && task.subtasks.length > 0 && (
-                                        <div className="border-l-2 border-blue-100 pl-3 space-y-2 mb-2">
-                                          {task.subtasks.map((st: any, i: number) => (
-                                            <div key={st.id || i} className="flex items-center gap-2 group/st">
-                                              <CheckSquare className="w-3.5 h-3.5 text-gray-400" />
-                                              {editingNestedSubtaskId === st.id ? (
-                                                <input
-                                                  autoFocus
-                                                  className="font-bold text-gray-700 text-xs bg-white px-2 py-0.5 rounded border border-gray-300 shadow-sm outline-none"
-                                                  value={subtaskTitleEditValue}
-                                                  onChange={e => setSubtaskTitleEditValue(e.target.value)}
-                                                  onKeyDown={e => {
-                                                    if (e.key === 'Enter') handleNestedSubtaskTitleSave(task);
-                                                  }}
-                                                  onBlur={() => handleNestedSubtaskTitleSave(task)}
-                                                />
-                                              ) : (
-                                                <div className="flex items-center gap-1.5">
-                                                  <span className="text-xs font-semibold text-gray-700">{st.title}</span>
-                                                  <button
-                                                    onClick={() => {
-                                                      setEditingNestedSubtaskId(st.id);
-                                                      setSubtaskTitleEditValue(st.title);
-                                                    }}
-                                                    className="opacity-0 group-hover/st:opacity-100 text-gray-400 hover:text-blue-600 transition-opacity"
-                                                    title="Edit Subtask"
-                                                  >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                                                  </button>
-                                                </div>
-                                              )}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                      <button
-                                        onClick={() => {
-                                          const newSubtasks = [...(task.subtasks || []), { id: `st-${Date.now()}`, title: 'New Subtask', assignedTo: [], status: 'Pending', days: 1, durationValue: 1, durationUnit: 'days' }];
-                                          updateTask(task.id, { subtasks: newSubtasks });
-                                        }}
-                                        className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm w-fit"
-                                      >
-                                        <Plus className="w-3.5 h-3.5" /> Add Subtask
-                                      </button>
-                                    </div>
-                                  )}
 
                                   {task.specs && (
                                     <p className="text-xs text-gray-600 bg-gray-50 p-3 rounded-xl border border-gray-100 leading-relaxed mb-3">
@@ -3364,79 +3141,41 @@ const ProjectDependencyChart = ({ projTasks }: { projTasks: any[] }) => {
 };
 
 const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) => {
-  const [stages, setStages] = useState<any[]>(() => {
-    if (proj.rmStages && proj.rmStages.length > 0) return proj.rmStages;
-    if (proj.rmList && proj.rmList.length > 0) return [{ id: 'stage-1', name: 'Stage 1', items: proj.rmList }];
-    return [{ id: 'stage-1', name: 'Stage 1', items: [{ name: '', casNumber: '', remarks: '' }] }];
-  });
+  const [data, setData] = useState<any[]>(proj.rmList?.length ? proj.rmList : [{ name: '', casNumber: '', remarks: '' }]);
 
-  const updateStageName = (stageId: string, newName: string) => {
-    setStages(stages.map(s => s.id === stageId ? { ...s, name: newName } : s));
+  const updateCell = (rowIndex: number, colName: string, val: string) => {
+    const newData = [...data];
+    newData[rowIndex] = { ...newData[rowIndex], [colName]: val };
+    setData(newData);
   };
 
-  const addStage = () => {
-    const newStage = {
-      id: `stage-${Date.now()}`,
-      name: `Stage ${stages.length + 1}`,
-      items: [{ name: '', casNumber: '', remarks: '' }]
-    };
-    setStages([...stages, newStage]);
+  const addRow = () => {
+    setData([...data, { name: '', casNumber: '', remarks: '' }]);
   };
 
-  const removeStage = (stageId: string) => {
-    if (!confirm("Are you sure you want to delete this entire stage and all its materials?")) return;
-    const newStages = stages.filter(s => s.id !== stageId);
-    setStages(newStages.length ? newStages : [{ id: `stage-${Date.now()}`, name: 'Stage 1', items: [{ name: '', casNumber: '', remarks: '' }] }]);
-  };
-
-  const updateCell = (stageId: string, rowIndex: number, colName: string, val: string) => {
-    setStages(stages.map(s => {
-      if (s.id === stageId) {
-        const newItems = [...s.items];
-        newItems[rowIndex] = { ...newItems[rowIndex], [colName]: val };
-        return { ...s, items: newItems };
-      }
-      return s;
-    }));
-  };
-
-  const addRow = (stageId: string) => {
-    setStages(stages.map(s => {
-      if (s.id === stageId) {
-        return { ...s, items: [...s.items, { name: '', casNumber: '', remarks: '' }] };
-      }
-      return s;
-    }));
-  };
-
-  const removeRow = (stageId: string, index: number) => {
-    if (!confirm(`Are you sure you want to delete this item?`)) return;
-    setStages(stages.map(s => {
-      if (s.id === stageId) {
-        const newItems = s.items.filter((_: any, i: number) => i !== index);
-        return { ...s, items: newItems.length ? newItems : [{ name: '', casNumber: '', remarks: '' }] };
-      }
-      return s;
-    }));
+  const removeRow = (index: number) => {
+    if (!confirm(`Are you sure you want to delete Raw Material at row ${index + 1}?`)) return;
+    const newData = data.filter((_, i) => i !== index);
+    setData(newData.length ? newData : [{ name: '', casNumber: '', remarks: '' }]);
   };
 
   const save = () => {
-    updateProject(proj.id, { rmStages: stages });
-    alert("Saved Raw Material stages successfully!");
+    updateProject(proj.id, { rmList: data });
+    alert("Saved Raw Material list successfully!");
   };
 
   return (
-    <Card className="p-6 bg-white overflow-hidden flex flex-col space-y-6 shadow-sm border border-gray-100 rounded-2xl animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+    <Card className="p-6 bg-white overflow-hidden flex flex-col space-y-4 shadow-sm border border-gray-100 rounded-2xl animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
-          <FolderKanban className="w-5 h-5 text-[#3b82f6]" /> Raw Materials List
+          <FolderKanban className="w-5 h-5 text-[#3b82f6]" /> Raw Material List
         </h3>
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={addStage}
-            className="bg-blue-50 hover:bg-blue-100 text-[#1e3a5f] px-3.5 py-1.5 rounded-lg text-xs font-bold border border-blue-200 transition-all flex items-center gap-1.5"
+            onClick={addRow}
+            className="bg-blue-50 hover:bg-blue-50 text-[#1e3a5f] px-3.5 py-1.5 rounded-lg text-xs font-bold border border-blue-200 transition-all flex items-center gap-1.5"
           >
-            <Plus className="w-4 h-4" /> Add Stage
+            <Plus className="w-4 h-4" /> Add Row
           </button>
           <button
             onClick={save}
@@ -3446,96 +3185,60 @@ const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) =
           </button>
         </div>
       </div>
-      
-      <div className="space-y-6">
-        {stages.map((stage, stageIndex) => (
-          <div key={stage.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-            <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-1">
-                <span className="shrink-0 w-6 h-6 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">
-                  {stageIndex + 1}
-                </span>
-                <input
-                  type="text"
-                  value={stage.name}
-                  onChange={(e) => updateStageName(stage.id, e.target.value)}
-                  className="font-bold text-gray-900 bg-transparent border-none outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1 max-w-sm"
-                  placeholder="Stage Name..."
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => addRow(stage.id)}
-                  className="text-[#1e3a5f] bg-white border border-gray-200 hover:bg-gray-100 px-3 py-1 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1"
-                >
-                  <Plus className="w-3 h-3" /> Add Item
-                </button>
-                <button
-                  onClick={() => removeStage(stage.id)}
-                  className="text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"
-                  title="Delete Stage"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-white border-b border-gray-100 text-gray-500 text-[11px] uppercase tracking-wider font-bold">
-                  <tr>
-                    <th className="p-3 border-r border-gray-100 w-12 text-center">#</th>
-                    <th className="p-3 border-r border-gray-100 min-w-[200px]">Material Name</th>
-                    <th className="p-3 border-r border-gray-100 min-w-[150px]">CAS Number</th>
-                    <th className="p-3 border-r border-gray-100 min-w-[250px]">Remarks</th>
-                    <th className="p-3 w-12 text-center"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stage.items.map((row: any, rowIndex: number) => (
-                    <tr key={rowIndex} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                      <td className="p-3 font-semibold text-gray-400 bg-gray-50/30 border-r border-gray-100 text-center w-12 text-xs">
-                        {rowIndex + 1}
-                      </td>
-                      <td className="p-1 border-r border-gray-100 min-w-[200px]">
-                        <input
-                          className="w-full p-2 outline-none focus:bg-blue-50/30 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-800 text-xs rounded-lg"
-                          placeholder="Material name..."
-                          value={row.name || ''}
-                          onChange={e => updateCell(stage.id, rowIndex, 'name', e.target.value)}
-                        />
-                      </td>
-                      <td className="p-1 border-r border-gray-100 min-w-[150px]">
-                        <input
-                          className="w-full p-2 outline-none focus:bg-blue-50/30 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-800 text-xs rounded-lg"
-                          placeholder="CAS e.g. 103-90-2"
-                          value={row.casNumber || ''}
-                          onChange={e => updateCell(stage.id, rowIndex, 'casNumber', e.target.value)}
-                        />
-                      </td>
-                      <td className="p-1 border-r border-gray-100 min-w-[250px]">
-                        <input
-                          className="w-full p-2 outline-none focus:bg-blue-50/30 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-800 text-xs rounded-lg"
-                          placeholder="Remarks..."
-                          value={row.remarks || ''}
-                          onChange={e => updateCell(stage.id, rowIndex, 'remarks', e.target.value)}
-                        />
-                      </td>
-                      <td className="p-1 text-center w-12">
-                        <button
-                          onClick={() => removeRow(stage.id, rowIndex)}
-                          className="text-gray-400 hover:text-rose-500 transition-colors p-1.5 rounded-lg hover:bg-rose-50"
-                          title="Delete Item"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))}
+      <div className="overflow-x-auto border border-gray-200 rounded-xl">
+        <table className="w-full text-left text-sm whitespace-nowrap">
+          <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold">
+            <tr>
+              <th className="p-3.5 border-r border-gray-200 w-16 text-center">S.No.</th>
+              <th className="p-3.5 border-r border-gray-200 min-w-[250px]">Name of the Raw material</th>
+              <th className="p-3.5 border-r border-gray-200 min-w-[180px]">CAS Number</th>
+              <th className="p-3.5 border-r border-gray-200 min-w-[280px]">Remarks</th>
+              <th className="p-3.5 w-16 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row, rowIndex) => (
+              <tr key={rowIndex} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/30 transition-colors">
+                <td className="p-3.5 font-semibold text-gray-600 bg-gray-50 border-r border-gray-200 text-center w-16">
+                  {rowIndex + 1}
+                </td>
+                <td className="p-1 border-r border-gray-100 min-w-[250px]">
+                  <input
+                    className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
+                    placeholder="Enter name of raw material..."
+                    value={row.name || ''}
+                    onChange={e => updateCell(rowIndex, 'name', e.target.value)}
+                  />
+                </td>
+                <td className="p-1 border-r border-gray-100 min-w-[180px]">
+                  <input
+                    className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
+                    placeholder="e.g. 103-90-2"
+                    value={row.casNumber || ''}
+                    onChange={e => updateCell(rowIndex, 'casNumber', e.target.value)}
+                  />
+                </td>
+                <td className="p-1 border-r border-gray-100 min-w-[280px]">
+                  <input
+                    className="w-full p-2.5 outline-none focus:bg-blue-50/50 hover:bg-gray-50/50 transition-colors bg-transparent text-gray-900 text-xs rounded-lg"
+                    placeholder="Enter remarks..."
+                    value={row.remarks || ''}
+                    onChange={e => updateCell(rowIndex, 'remarks', e.target.value)}
+                  />
+                </td>
+                <td className="p-1 text-center w-16">
+                  <button
+                    onClick={() => removeRow(rowIndex)}
+                    className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50"
+                    title="Delete Row"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </Card>
   );
@@ -3609,10 +3312,9 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
   const BAR_COLOR = {
     completed: { bar: 'bg-emerald-500', text: 'Completed', dot: 'bg-emerald-500' },
     safe: { bar: 'bg-blue-500', text: 'Safe', dot: 'bg-blue-500' },
-    alert: { bar: 'bg-amber-500', text: 'Alert', dot: 'bg-amber-500' },
+    alert: { bar: 'bg-yellow-400', text: 'Alert', dot: 'bg-yellow-400' },
     critical: { bar: 'bg-red-500', text: 'Critical', dot: 'bg-red-500' },
-    delayed: { bar: 'bg-purple-500', text: 'Delayed', dot: 'bg-purple-500' },
-    baseline: { bar: 'bg-gray-500', text: 'Baseline Schedule', dot: 'bg-gray-500' },
+    delayed: { bar: 'bg-red-500', text: 'Delayed', dot: 'bg-red-500' },
   };
 
   const getBarStyle = (d: typeof taskData[0]) => {
@@ -3783,15 +3485,13 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                       {/* Bottom Bar: Planned Duration (Grey) */}
                       {plannedStart && plannedEnd && dateToPercent(plannedStart) <= 100 && (
                         <div
-                          className="absolute bottom-1.5 h-2.5 rounded-full shadow-sm bg-gray-500 opacity-80 group/greybar flex items-center justify-center overflow-visible"
+                          className="absolute bottom-1.5 h-2.5 rounded-full shadow-sm bg-gray-500 opacity-80"
                           style={{
                             left: `${dateToPercent(plannedStart)}%`,
                             width: `${Math.max(0.5, dateToPercent(plannedEnd) - dateToPercent(plannedStart))}%`
                           }}
                           title={`Planned: ${fmtDate(plannedStart)} → ${fmtDate(plannedEnd)}`}
-                        >
-                          <span className="opacity-0 group-hover/greybar:opacity-100 transition-opacity absolute -top-5 whitespace-nowrap text-[9px] font-bold text-gray-700 bg-white border border-gray-200 px-1 py-0.5 rounded shadow-sm z-30 pointer-events-none">Baseline Schedule</span>
-                        </div>
+                        />
                       )}
 
                       {/* Task deadline marker */}
@@ -3837,9 +3537,9 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
         <p className="text-[11px] text-gray-500">Industry-standard colour coding comparing time elapsed against task duration.</p>
         <div className="relative w-full h-5 rounded-full overflow-hidden flex">
           {/* Coloured zone segments */}
-          <div className="h-full bg-blue-500" style={{ width: '65%' }} title="Safe 0–65%" />
-          <div className="h-full bg-amber-500" style={{ width: '25%' }} title="Alert 65–90%" />
-          <div className="h-full bg-red-500" style={{ width: '10%' }} title="Critical >90%" />
+          <div className="h-full bg-green-300" style={{ width: '65%' }} title="Safe 0–65%" />
+          <div className="h-full bg-yellow-200" style={{ width: '25%' }} title="Alert 65–90%" />
+          <div className="h-full bg-red-300" style={{ width: '10%' }} title="Critical >90%" />
         </div>
         <div className="relative w-full">
           {/* Overall project progress marker */}
@@ -3852,7 +3552,7 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
             const completedCount = taskData.filter(d => d.isCompleted).length;
             const delayedCount = taskData.filter(d => d.isDelayed).length;
             const label = delayedCount > 0 ? 'Behind Schedule' : projPct > 90 ? 'Critical' : projPct > 65 ? 'Alert' : 'On/Ahead of Schedule';
-            const labelColor = delayedCount > 0 ? 'bg-purple-500' : projPct > 90 ? 'bg-red-500' : projPct > 65 ? 'bg-amber-500' : 'bg-blue-500';
+            const labelColor = delayedCount > 0 ? 'bg-red-500' : projPct > 90 ? 'bg-red-500' : projPct > 65 ? 'bg-yellow-500' : 'bg-green-500';
             return (
               <>
                 <div
@@ -3865,10 +3565,10 @@ export const GanttChartTab = ({ projTasks, proj, users, allTaskDates, isClientVi
                 </div>
                 <div className="flex items-center justify-between mt-6">
                   <div className="flex flex-wrap gap-3 text-[11px] font-semibold">
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Safe (0–65%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" />Alert (65–90%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500" />Safe (0–65%)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />Alert (65–90%)</span>
                     <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />Critical (&gt;90%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" />Delayed</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />Delayed</span>
                   </div>
                   <span className={`text-[11px] font-black text-white px-3 py-1 rounded-full shadow-sm ${labelColor}`}>
                     {label}
