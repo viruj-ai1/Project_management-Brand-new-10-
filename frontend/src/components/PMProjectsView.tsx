@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   FolderKanban, ChevronRight, ChevronDown, Clock, ShieldAlert, CheckSquare,
   Send, UserSquare2, Activity, AlertCircle, CheckCircle,
-  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles
+  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles, Edit2
 } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { TASK_STATUS, ROLES, computeDynamicBufferPool, addWorkingDays, isRestDay, getWorkingDaysElapsed } from '../constants';
@@ -891,6 +891,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   const [expandedSubtaskId, setExpandedSubtaskId] = useState<string | null>(null);
   const [expandedTaskLogId, setExpandedTaskLogId] = useState<string | null>(null);
   const [editingParentTitle, setEditingParentTitle] = useState<string | null>(null);
+  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
+  const [editProjectNameValue, setEditProjectNameValue] = useState('');
   const [parentTitleEditValue, setParentTitleEditValue] = useState<string>('');
   const [editingNestedSubtaskId, setEditingNestedSubtaskId] = useState<string | null>(null);
   const [subtaskTitleEditValue, setSubtaskTitleEditValue] = useState<string>('');
@@ -899,7 +901,6 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   const [bufferDaysInput, setBufferDaysInput] = useState<string>('');
 
   const handleParentTitleSave = (oldParentTitle: string, tasksToUpdate: any[]) => {
-    if (!editingParentTitle) return;
     const newTitle = parentTitleEditValue.trim();
     if (newTitle && newTitle !== oldParentTitle) {
       tasksToUpdate.forEach(t => {
@@ -913,9 +914,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   };
 
   const handleNestedSubtaskTitleSave = (task: any) => {
-    if (!editingNestedSubtaskId) return;
     const newTitle = subtaskTitleEditValue.trim();
-    if (newTitle) {
+    if (newTitle && editingNestedSubtaskId) {
       const newSubtasks = (task.subtasks || []).map((st: any) => 
         st.id === editingNestedSubtaskId ? { ...st, title: newTitle } : st
       );
@@ -1298,7 +1298,62 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                 </span>
               )}
             </div>
-            <h2 className="text-3xl font-black mb-2 tracking-tight">{proj.name}</h2>
+            <div className="flex items-center gap-3 mb-2">
+              {isEditingProjectName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editProjectNameValue}
+                    onChange={(e) => setEditProjectNameValue(e.target.value)}
+                    className="text-3xl font-black tracking-tight bg-white/10 border border-white/30 rounded-lg px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 w-auto min-w-[300px]"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (editProjectNameValue.trim()) {
+                          updateProject(proj.id, { name: editProjectNameValue.trim() });
+                        }
+                        setIsEditingProjectName(false);
+                      } else if (e.key === 'Escape') {
+                        setIsEditingProjectName(false);
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (editProjectNameValue.trim()) {
+                        updateProject(proj.id, { name: editProjectNameValue.trim() });
+                      }
+                      setIsEditingProjectName(false);
+                    }}
+                    className="bg-green-500 hover:bg-green-600 p-1.5 rounded-lg text-white"
+                  >
+                    <CheckSquare className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setIsEditingProjectName(false)}
+                    className="bg-red-500 hover:bg-red-600 p-1.5 rounded-lg text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-3xl font-black tracking-tight">{proj.name}</h2>
+                  {!readOnly && (
+                    <button
+                      onClick={() => {
+                        setEditProjectNameValue(proj.name);
+                        setIsEditingProjectName(true);
+                      }}
+                      className="text-white/50 hover:text-white transition-colors p-1"
+                      title="Edit Project Name"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
             {proj.description && <p className="text-blue-200 text-sm max-w-2xl leading-relaxed">{proj.description}</p>}
 
             <div className="flex flex-wrap gap-6 mt-6 text-sm text-blue-200">

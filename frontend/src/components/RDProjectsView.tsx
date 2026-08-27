@@ -3,7 +3,7 @@ import {
   FolderKanban, Plus, ChevronRight, Clock, Users, ShieldAlert,
   CheckCircle, XCircle, PauseCircle, Search, X, Calendar, Tag,
   User, Play, RotateCcw, CheckSquare, AlertCircle,
-  Activity, UserSquare2, AlertTriangle
+  Activity, UserSquare2, AlertTriangle, Edit2
 } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { ROLES, TASK_STATUS } from '../constants';
@@ -56,7 +56,7 @@ const STATUS_ACTIONS: Record<string, { label: string; icon: any; targetStatus: s
 };
 
 export const RDProjectsView = () => {
-  const { projects, tasks, addProject, updateProjectStatus, users } = useContext(AppContext);
+  const { projects, tasks, addProject, updateProjectStatus, users, updateProject } = useContext(AppContext);
   const [activeFilter, setActiveFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -64,6 +64,8 @@ export const RDProjectsView = () => {
   const [formData, setFormData] = useState({
     name: '', deadline: '', pmId: '', description: '', category: '', priority: 'Medium', clientId: '', clientName: ''
   });
+  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
+  const [editProjectNameValue, setEditProjectNameValue] = useState('');
 
   const pms = users.filter((u: any) => u.role === ROLES.PM);
   const clients = users.filter((u: any) => u.role === ROLES.CLIENT);
@@ -141,7 +143,60 @@ export const RDProjectsView = () => {
               )}
             </div>
 
-            <h2 className="text-3xl font-black mb-2 tracking-tight">{proj.name}</h2>
+            <div className="flex items-center gap-3 mb-2">
+              {isEditingProjectName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editProjectNameValue}
+                    onChange={(e) => setEditProjectNameValue(e.target.value)}
+                    className="text-3xl font-black tracking-tight bg-white/10 border border-white/30 rounded-lg px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 w-auto min-w-[300px]"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (editProjectNameValue.trim()) {
+                          updateProject(proj.id, { name: editProjectNameValue.trim() });
+                        }
+                        setIsEditingProjectName(false);
+                      } else if (e.key === 'Escape') {
+                        setIsEditingProjectName(false);
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (editProjectNameValue.trim()) {
+                        updateProject(proj.id, { name: editProjectNameValue.trim() });
+                      }
+                      setIsEditingProjectName(false);
+                    }}
+                    className="bg-green-500 hover:bg-green-600 p-1.5 rounded-lg text-white"
+                  >
+                    <CheckSquare className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setIsEditingProjectName(false)}
+                    className="bg-red-500 hover:bg-red-600 p-1.5 rounded-lg text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-3xl font-black tracking-tight">{proj.name}</h2>
+                  <button
+                    onClick={() => {
+                      setEditProjectNameValue(proj.name);
+                      setIsEditingProjectName(true);
+                    }}
+                    className="text-white/50 hover:text-white transition-colors p-1"
+                    title="Edit Project Name"
+                  >
+                    <Edit2 className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+            </div>
             {proj.description && <p className="text-blue-200 text-sm max-w-2xl leading-relaxed">{proj.description}</p>}
 
             {/* Meta row */}
