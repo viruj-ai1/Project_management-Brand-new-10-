@@ -1105,7 +1105,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
         alert("Projected End Date cannot be earlier than Projected Start Date!");
         return;
       }
-      updateProject(proj.id, { projectedEnd: newDateStr });
+      updateProject(proj.id, { projectedEnd: newDateStr, deadline: newDateStr });
     };
 
     // Group all tasks by parent title
