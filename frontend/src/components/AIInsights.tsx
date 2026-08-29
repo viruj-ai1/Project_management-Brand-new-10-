@@ -88,7 +88,7 @@ export const AIInsights = () => {
     const fetchInsights = async () => {
       setIsLoading(true);
       try {
-        const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || http://localhost:8000;
+        const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const apiBase = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
         const response = await fetch(`${apiBase}/ai-insights`, {
           method: 'POST',
