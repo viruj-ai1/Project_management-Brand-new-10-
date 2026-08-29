@@ -907,15 +907,22 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
 
   const handleParentTitleSave = (oldParentTitle: string, tasksToUpdate: any[]) => {
     const newTitle = parentTitleEditValue.trim();
+    setEditingParentTitle(null);
     if (newTitle && newTitle !== oldParentTitle) {
       tasksToUpdate.forEach(t => {
-        const parts = t.title.split(' — ');
-        parts[0] = newTitle;
-        const updatedTitle = parts.join(' — ');
+        let updatedTitle = newTitle;
+        if (t.title.includes(' — ')) {
+          const parts = t.title.split(' — ');
+          parts[0] = newTitle;
+          updatedTitle = parts.join(' — ');
+        } else if (t.title.includes(' - ')) {
+          const parts = t.title.split(' - ');
+          parts[0] = newTitle;
+          updatedTitle = parts.join(' - ');
+        }
         updateTask(t.id, { title: updatedTitle });
       });
     }
-    setEditingParentTitle(null);
   };
 
   const handleNestedSubtaskTitleSave = (task: any) => {
@@ -2021,20 +2028,31 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                         <div className="flex-1">
                           {editingParentTitle === parentTitle && !readOnly ? (
                             <div className="flex items-center gap-2 mb-2">
-                              <CheckSquare className="w-5 h-5 text-[#3b82f6]" />
+                              <CheckSquare className="w-5 h-5 text-[#3b82f6] shrink-0" />
                               <input
                                 autoFocus
-                                className="text-lg font-extrabold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 outline-none w-full max-w-sm"
+                                className="text-lg font-extrabold text-gray-900 bg-white border border-blue-400 rounded-lg px-2.5 py-1 outline-none focus:ring-2 focus:ring-blue-500/20 w-full max-w-md shadow-xs"
                                 value={parentTitleEditValue}
                                 onChange={(e) => setParentTitleEditValue(e.target.value)}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') handleParentTitleSave(parentTitle, subtasksList);
+                                  if (e.key === 'Escape') setEditingParentTitle(null);
                                 }}
                                 onBlur={() => handleParentTitleSave(parentTitle, subtasksList)}
                               />
+                              <button
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  handleParentTitleSave(parentTitle, subtasksList);
+                                }}
+                                className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors shrink-0"
+                                title="Save Heading"
+                              >
+                                <CheckCircle className="w-5 h-5" />
+                              </button>
                             </div>
                           ) : (
-                            <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2 mb-2 group relative w-fit">
+                            <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2 mb-2 relative w-fit">
                               <CheckSquare className="w-5 h-5 text-[#3b82f6]" />
                               {parentTitle}
                               {!readOnly && (
@@ -2043,10 +2061,10 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                     setEditingParentTitle(parentTitle);
                                     setParentTitleEditValue(parentTitle);
                                   }}
-                                  className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-blue-600 transition-all rounded-full hover:bg-blue-50 ml-1"
+                                  className="p-1 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 transition-all rounded-full ml-1.5 inline-flex items-center justify-center shadow-xs"
                                   title="Edit Task Heading"
                                 >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                                 </button>
                               )}
                             </h4>

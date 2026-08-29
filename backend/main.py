@@ -85,6 +85,8 @@ class Task(BaseModel):
     subtasks: Optional[List[Dict[str, Any]]] = None
 
 class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    specs: Optional[str] = None
     status: Optional[str] = None
     assignedTo: Optional[Any] = None
     subtasks: Optional[List[Dict[str, Any]]] = None
