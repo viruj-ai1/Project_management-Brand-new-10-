@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   FolderKanban, ChevronRight, ChevronDown, Clock, ShieldAlert, CheckSquare,
   Send, UserSquare2, Activity, AlertCircle, CheckCircle,
-  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles
+  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles, Edit2
 } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { TASK_STATUS, ROLES, computeDynamicBufferPool, addWorkingDays, isRestDay, getWorkingDaysElapsed } from '../constants';
@@ -807,6 +807,11 @@ export const useAllTaskDates = (tasks: any[], projects: any[]) => {
 
     const getProjectStart = (projectId: string) => {
       const p = projects.find((p: any) => p.id === projectId);
+      if (p?.projectedStart) {
+        const d = new Date(p.projectedStart);
+        d.setHours(0, 0, 0, 0);
+        return d;
+      }
       if (p?.createdAt) {
         const d = new Date(p.createdAt);
         d.setHours(0, 0, 0, 0);
@@ -891,6 +896,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   const [expandedSubtaskId, setExpandedSubtaskId] = useState<string | null>(null);
   const [expandedTaskLogId, setExpandedTaskLogId] = useState<string | null>(null);
   const [editingParentTitle, setEditingParentTitle] = useState<string | null>(null);
+  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
+  const [editProjectNameValue, setEditProjectNameValue] = useState('');
   const [parentTitleEditValue, setParentTitleEditValue] = useState<string>('');
   const [editingNestedSubtaskId, setEditingNestedSubtaskId] = useState<string | null>(null);
   const [subtaskTitleEditValue, setSubtaskTitleEditValue] = useState<string>('');
@@ -1051,6 +1058,55 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
     const projTasks = tasks.filter((t: any) => t.projectId === proj.id);
     const approvedTasks = projTasks.filter((t: any) => t.status === TASK_STATUS.PENDING_START).length;
     const totalAssignedDays = projTasks.reduce((s: number, t: any) => s + (t.assignedDays || 0), 0);
+
+    // Project Dynamic Dates
+    let projectDynamicStart: Date | null = null;
+    let projectDynamicEnd: Date | null = null;
+    
+    if (projTasks.length > 0) {
+      projTasks.forEach((t: any) => {
+        const dates = allTaskDates[t.id];
+        if (dates) {
+          if (!projectDynamicStart || dates.start < projectDynamicStart) projectDynamicStart = dates.start;
+          if (!projectDynamicEnd || dates.end > projectDynamicEnd) projectDynamicEnd = dates.end;
+        }
+      });
+    }
+
+    const formatDate = (d: Date | null) => d ? d.toISOString().split('T')[0] : 'N/A';
+
+    const handleProjectedStartChange = (newDateStr: string) => {
+      if (!proj.projectedStart) {
+        updateProject(proj.id, { projectedStart: newDateStr });
+        return;
+      }
+      const oldStart = new Date(proj.projectedStart);
+      const newStart = new Date(newDateStr);
+      const diffTime = newStart.getTime() - oldStart.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      
+      const updates: any = { projectedStart: newDateStr };
+      if (proj.deadline) {
+        const oldDeadline = new Date(proj.deadline);
+        const newDeadline = new Date(oldDeadline.getTime() + diffDays * (1000 * 60 * 60 * 24));
+        updates.deadline = newDeadline.toISOString().split('T')[0];
+      }
+      if (proj.projectedEnd) {
+        const oldProjectedEnd = new Date(proj.projectedEnd);
+        const newProjectedEnd = new Date(oldProjectedEnd.getTime() + diffDays * (1000 * 60 * 60 * 24));
+        updates.projectedEnd = newProjectedEnd.toISOString().split('T')[0];
+      }
+      updateProject(proj.id, updates);
+      alert(`Shifted projected start by ${diffDays} days. Project tasks and deadline have been updated.`);
+    };
+
+    const handleProjectedEndChange = (newDateStr: string) => {
+      if (proj.projectedStart && new Date(newDateStr) < new Date(proj.projectedStart)) {
+        alert("Projected End Date cannot be earlier than Projected Start Date!");
+        return;
+      }
+      updateProject(proj.id, { projectedEnd: newDateStr, deadline: newDateStr });
+    };
 
     // Group all tasks by parent title
     const groupedForProjectProgress: Record<string, any[]> = {};
@@ -1296,7 +1352,62 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                 </span>
               )}
             </div>
-            <h2 className="text-3xl font-black mb-2 tracking-tight">{proj.name}</h2>
+            <div className="flex items-center gap-3 mb-2">
+              {isEditingProjectName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editProjectNameValue}
+                    onChange={(e) => setEditProjectNameValue(e.target.value)}
+                    className="text-3xl font-black tracking-tight bg-white/10 border border-white/30 rounded-lg px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 w-auto min-w-[300px]"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (editProjectNameValue.trim()) {
+                          updateProject(proj.id, { name: editProjectNameValue.trim() });
+                        }
+                        setIsEditingProjectName(false);
+                      } else if (e.key === 'Escape') {
+                        setIsEditingProjectName(false);
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (editProjectNameValue.trim()) {
+                        updateProject(proj.id, { name: editProjectNameValue.trim() });
+                      }
+                      setIsEditingProjectName(false);
+                    }}
+                    className="bg-green-500 hover:bg-green-600 p-1.5 rounded-lg text-white"
+                  >
+                    <CheckSquare className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setIsEditingProjectName(false)}
+                    className="bg-red-500 hover:bg-red-600 p-1.5 rounded-lg text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-3xl font-black tracking-tight">{proj.name}</h2>
+                  {!readOnly && (
+                    <button
+                      onClick={() => {
+                        setEditProjectNameValue(proj.name);
+                        setIsEditingProjectName(true);
+                      }}
+                      className="text-white/50 hover:text-white transition-colors p-1"
+                      title="Edit Project Name"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
             {proj.description && <p className="text-blue-200 text-sm max-w-2xl leading-relaxed">{proj.description}</p>}
 
             <div className="flex flex-wrap gap-6 mt-6 text-sm text-blue-200">
@@ -1323,7 +1434,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                   <input
                     type="date"
                     value={proj.projectedStart || ''}
-                    onChange={e => updateProject(proj.id, { projectedStart: e.target.value })}
+                    onChange={e => handleProjectedStartChange(e.target.value)}
                     className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer [color-scheme:dark]"
                     title="Set Projected Start Date"
                   />
@@ -1339,11 +1450,22 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                   <input
                     type="date"
                     value={proj.projectedEnd || ''}
-                    onChange={e => updateProject(proj.id, { projectedEnd: e.target.value })}
+                    onChange={e => handleProjectedEndChange(e.target.value)}
                     className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer [color-scheme:dark]"
                     title="Set Projected End Date"
                   />
                 )}
+              </div>
+              {/* Dynamic Dates */}
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-amber-300" />
+                <span>Dynamic Start:</span>
+                <strong className="text-white">{formatDate(projectDynamicStart)}</strong>
+              </div>
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-amber-300" />
+                <span>Dynamic End:</span>
+                <strong className="text-white">{formatDate(projectDynamicEnd)}</strong>
               </div>
             </div>
           </div>

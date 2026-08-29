@@ -56,7 +56,15 @@ def fetch_all(query: str, params=None):
                 return []
     except Exception as e:
         print(f"fetch_all DB error: {e}. Falling back to local data.")
-        import db_adapter as dba
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        try:
+            import db_adapter as dba
+        except ImportError:
+            print("Failed to import db_adapter")
+            return []
+        
         if "users" in query.lower():
             users = dba.get_users()
             return [{"id": u["id"], "name": u["name"], "role": u["role"], "manager_id": u.get("managerId"), "password_hash": u.get("password_hash")} for u in users]

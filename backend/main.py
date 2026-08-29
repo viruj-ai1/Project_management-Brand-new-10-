@@ -20,6 +20,16 @@ import bcrypt
 
 app = FastAPI()
 
+@app.on_event("startup")
+def startup_event():
+    try:
+        execute_query("ALTER TABLE public.projects ADD COLUMN projected_start VARCHAR;", returning=False)
+    except Exception as e:
+        print("Migration projected_start:", e)
+    try:
+        execute_query("ALTER TABLE public.projects ADD COLUMN projected_end VARCHAR;", returning=False)
+    except Exception as e:
+        print("Migration projected_end:", e)
 cors_origins_env = os.environ.get("CORS_ORIGINS", "")
 origins = [origin.strip() for origin in cors_origins_env.split(",")] if cors_origins_env else ["*"]
 
@@ -57,6 +67,8 @@ class Project(BaseModel):
     rmStages: Optional[List[Dict[str, Any]]] = None
     clientId: Optional[str] = None
     clientName: Optional[str] = None
+    projectedStart: Optional[str] = None
+    projectedEnd: Optional[str] = None
 
 class Task(BaseModel):
     title: str
@@ -99,6 +111,7 @@ class TaskUpdate(BaseModel):
     prerequisitesChecklist: Optional[List[Dict[str, Any]]] = None
 
 class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
     bufferPool: Optional[int] = None
     status: Optional[str] = None
     description: Optional[str] = None
@@ -111,6 +124,8 @@ class ProjectUpdate(BaseModel):
     rmStages: Optional[List[Dict[str, Any]]] = None
     clientId: Optional[str] = None
     clientName: Optional[str] = None
+    projectedStart: Optional[str] = None
+    projectedEnd: Optional[str] = None
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -368,18 +383,28 @@ async def get_projects():
     projects = fetch_all("""
         SELECT id, name, deadline, pm_id, status, buffer_pool, 
                description, category, priority, client_id, client_name, 
-               business_case, rm_list
+               business_case, rm_list, projected_start, projected_end
         FROM public.projects;
     """)
     for p in projects:
-        if p.get("deadline") and hasattr(p["deadline"], "isoformat"):
-            p["deadline"] = p["deadline"].isoformat()
+        if p.get("deadline"):
+            p["deadline"] = p["deadline"].isoformat() if hasattr(p["deadline"], "isoformat") else str(p["deadline"])
         p["pmId"] = p.pop("pm_id")
         p["bufferPool"] = p.pop("buffer_pool")
         p["clientId"] = p.pop("client_id")
         p["clientName"] = p.pop("client_name")
         p["businessCase"] = p.pop("business_case")
         p["rmList"] = p.pop("rm_list")
+        if p.get("projected_start"): 
+            p["projectedStart"] = p["projected_start"].isoformat() if hasattr(p["projected_start"], "isoformat") else str(p["projected_start"])
+        else: 
+            p["projectedStart"] = None
+        p.pop("projected_start", None)
+        if p.get("projected_end"): 
+            p["projectedEnd"] = p["projected_end"].isoformat() if hasattr(p["projected_end"], "isoformat") else str(p["projected_end"])
+        else: 
+            p["projectedEnd"] = None
+        p.pop("projected_end", None)
     return projects
 
 @app.post("/api/projects")
@@ -389,11 +414,11 @@ async def create_project(project: Project):
         INSERT INTO public.projects (
             id, name, deadline, pm_id, status, buffer_pool, 
             description, category, priority, client_id, client_name, 
-            business_case, rm_list
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            business_case, rm_list, projected_start, projected_end
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id, name, deadline, pm_id, status, buffer_pool, 
                   description, category, priority, client_id, client_name, 
-                  business_case, rm_list;
+                  business_case, rm_list, projected_start, projected_end;
     """
     res = execute_query(query, (
         proj_id,
@@ -408,11 +433,13 @@ async def create_project(project: Project):
         project.clientId,
         project.clientName,
         Json(project.businessCase) if project.businessCase is not None else None,
-        Json(project.rmList) if project.rmList is not None else None
+        Json(project.rmList) if project.rmList is not None else None,
+        project.projectedStart,
+        project.projectedEnd
     ), returning=True)
     if res:
-        if res.get("deadline") and hasattr(res["deadline"], "isoformat"):
-            res["deadline"] = res["deadline"].isoformat()
+        if res.get("deadline"):
+            res["deadline"] = res["deadline"].isoformat() if hasattr(res["deadline"], "isoformat") else str(res["deadline"])
         res["pmId"] = res.pop("pm_id")
         res["bufferPool"] = res.pop("buffer_pool")
         res["clientId"] = res.pop("client_id")
@@ -446,7 +473,9 @@ async def update_project(project_id: str, update: ProjectUpdate):
         "clientId": "client_id",
         "clientName": "client_name",
         "businessCase": "business_case",
-        "rmList": "rm_list"
+        "rmList": "rm_list",
+        "projectedStart": "projected_start",
+        "projectedEnd": "projected_end"
     }
     for k, v in updates.items():
         db_key = key_mapping.get(k, k)
@@ -462,18 +491,28 @@ async def update_project(project_id: str, update: ProjectUpdate):
         WHERE id = %s
         RETURNING id, name, deadline, pm_id, status, buffer_pool, 
                   description, category, priority, client_id, client_name, 
-                  business_case, rm_list;
+                  business_case, rm_list, projected_start, projected_end;
     """
     res = execute_query(query, tuple(params), returning=True)
     if res:
-        if res.get("deadline") and hasattr(res["deadline"], "isoformat"):
-            res["deadline"] = res["deadline"].isoformat()
+        if res.get("deadline"):
+            res["deadline"] = res["deadline"].isoformat() if hasattr(res["deadline"], "isoformat") else str(res["deadline"])
         res["pmId"] = res.pop("pm_id")
         res["bufferPool"] = res.pop("buffer_pool")
         res["clientId"] = res.pop("client_id")
         res["clientName"] = res.pop("client_name")
         res["businessCase"] = res.pop("business_case")
         res["rmList"] = res.pop("rm_list")
+        if res.get("projected_start"): 
+            res["projectedStart"] = res["projected_start"].isoformat() if hasattr(res["projected_start"], "isoformat") else str(res["projected_start"])
+        else: 
+            res["projectedStart"] = None
+        res.pop("projected_start", None)
+        if res.get("projected_end"): 
+            res["projectedEnd"] = res["projected_end"].isoformat() if hasattr(res["projected_end"], "isoformat") else str(res["projected_end"])
+        else: 
+            res["projectedEnd"] = None
+        res.pop("projected_end", None)
         return res
     raise HTTPException(status_code=404, detail="Project not found")
 

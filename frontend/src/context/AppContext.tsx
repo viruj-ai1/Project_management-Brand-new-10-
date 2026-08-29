@@ -2,7 +2,7 @@ import React, { useState, createContext, useEffect } from 'react';
 import axios from 'axios';
 
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || http://localhost:8000;
 const API_BASE = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
 
 export const AppContext = createContext<any>(null);
@@ -120,25 +120,30 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const updateTask = async (taskId: string, taskUpdates: any) => {
     try {
       const res = await axios.put(`${API_BASE}/tasks/${taskId}`, taskUpdates);
-      setTasks(tasks.map(t => t.id === taskId ? res.data : t));
+      setTasks(prev => prev.map(t => t.id === taskId ? res.data : t));
     } catch (error) {
       console.error('Error updating task:', error);
     }
   };
 
   const updateProject = async (projectId: string, projectUpdates: any) => {
+    // Optimistic update
+    const previousProjects = [...projects];
+    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...projectUpdates } : p));
     try {
       const res = await axios.put(`${API_BASE}/projects/${projectId}`, projectUpdates);
-      setProjects(projects.map(p => p.id === projectId ? res.data : p));
+      setProjects(prev => prev.map(p => p.id === projectId ? res.data : p));
     } catch (error) {
       console.error('Error updating project:', error);
+      // Revert on error
+      setProjects(previousProjects);
     }
   };
 
   const updateProjectStatus = async (projectId: string, newStatus: string) => {
     try {
       const res = await axios.put(`${API_BASE}/projects/${projectId}`, { status: newStatus });
-      setProjects(projects.map(p => p.id === projectId ? res.data : p));
+      setProjects(prev => prev.map(p => p.id === projectId ? res.data : p));
     } catch (error) {
       console.error('Error updating project status:', error);
     }
