@@ -807,10 +807,19 @@ export const useAllTaskDates = (tasks: any[], projects: any[]) => {
 
     const getProjectStart = (projectId: string) => {
       const p = projects.find((p: any) => p.id === projectId);
+      if (p?.projectedStart) {
+        const d = new Date(p.projectedStart);
+        if (!isNaN(d.getTime())) {
+          d.setHours(0, 0, 0, 0);
+          return d;
+        }
+      }
       if (p?.createdAt) {
         const d = new Date(p.createdAt);
-        d.setHours(0, 0, 0, 0);
-        return d;
+        if (!isNaN(d.getTime())) {
+          d.setHours(0, 0, 0, 0);
+          return d;
+        }
       }
       return new Date(today);
     };
@@ -849,7 +858,7 @@ export const useAllTaskDates = (tasks: any[], projects: any[]) => {
         });
         start = new Date(Math.max(...predEnds.map((d: Date) => d.getTime())));
       } else {
-        start = new Date(today);
+        start = new Date(projStart);
       }
 
       const end = addWorkingDays(start, days);
@@ -1053,18 +1062,102 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
     const totalAssignedDays = projTasks.reduce((s: number, t: any) => s + (t.assignedDays || 0), 0);
 
     const projTaskDates = projTasks.map((t: any) => allTaskDates[t.id]).filter(Boolean);
-    const projDynStart = projTaskDates.length > 0
+    let projDynStart = projTaskDates.length > 0
       ? new Date(Math.min(...projTaskDates.map((d: any) => d.start.getTime())))
-      : null;
-    const projDynEnd = projTaskDates.length > 0
+      : (proj.projectedStart ? new Date(proj.projectedStart) : null);
+    let projDynEnd = projTaskDates.length > 0
       ? new Date(Math.max(...projTaskDates.map((d: any) => d.end.getTime())))
-      : null;
+      : (proj.projectedEnd ? new Date(proj.projectedEnd) : null);
+
+    // Enforce date range guard: Dynamic Start <= Dynamic End
+    if (projDynStart && projDynEnd && projDynStart.getTime() > projDynEnd.getTime()) {
+      projDynEnd = new Date(projDynStart.getTime());
+    }
+
     const projDynStartStr = projDynStart && !isNaN(projDynStart.getTime())
       ? projDynStart.toISOString().split('T')[0]
       : 'N/A';
     const projDynEndStr = projDynEnd && !isNaN(projDynEnd.getTime())
       ? projDynEnd.toISOString().split('T')[0]
       : 'N/A';
+
+    const handleProjectedStartChange = (newStartStr: string) => {
+      if (!newStartStr) return;
+      const newStart = new Date(newStartStr);
+      if (isNaN(newStart.getTime())) return;
+
+      const oldStartStr = proj.projectedStart || (proj.createdAt ? new Date(proj.createdAt).toISOString().split('T')[0] : newStartStr);
+      const oldStart = new Date(oldStartStr);
+
+      const diffMs = newStart.getTime() - oldStart.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+      let newEndStr = proj.projectedEnd || '';
+
+      // Validation: If newStart > projectedEnd or end missing, auto-adjust projectedEnd to maintain duration
+      if (proj.projectedEnd) {
+        const oldEnd = new Date(proj.projectedEnd);
+        if (newStart.getTime() >= oldEnd.getTime()) {
+          const currentDurationMs = oldEnd.getTime() - oldStart.getTime();
+          const durationMs = currentDurationMs > 0 ? currentDurationMs : (24 * 60 * 60 * 1000);
+          const autoEnd = new Date(newStart.getTime() + durationMs);
+          newEndStr = autoEnd.toISOString().split('T')[0];
+        }
+      }
+
+      const updates: any = { projectedStart: newStartStr };
+      if (newEndStr) {
+        updates.projectedEnd = newEndStr;
+        updates.deadline = newEndStr; // Deadline auto-sync
+      }
+      updateProject(proj.id, updates);
+
+      // Cascade task date shifts if diffDays !== 0
+      if (diffDays !== 0 && projTasks.length > 0) {
+        projTasks.forEach((task: any) => {
+          const taskUpdates: any = {};
+          if (task.startedAt) {
+            const d = new Date(task.startedAt);
+            d.setDate(d.getDate() + diffDays);
+            taskUpdates.startedAt = d.toISOString();
+          }
+          if (task.completedAt) {
+            const d = new Date(task.completedAt);
+            d.setDate(d.getDate() + diffDays);
+            taskUpdates.completedAt = d.toISOString();
+          }
+          if (Object.keys(taskUpdates).length > 0) {
+            updateTask(task.id, taskUpdates);
+          }
+        });
+      }
+    };
+
+    const handleProjectedEndChange = (newEndStr: string) => {
+      if (!newEndStr) return;
+      const newEnd = new Date(newEndStr);
+      if (isNaN(newEnd.getTime())) return;
+
+      let newStartStr = proj.projectedStart || '';
+
+      // Validation: If newEnd <= projectedStart, auto-adjust projectedStart backward to preserve duration window
+      if (proj.projectedStart) {
+        const oldStart = new Date(proj.projectedStart);
+        if (newEnd.getTime() <= oldStart.getTime()) {
+          const autoStart = new Date(newEnd.getTime() - (24 * 60 * 60 * 1000));
+          newStartStr = autoStart.toISOString().split('T')[0];
+        }
+      }
+
+      const updates: any = {
+        projectedEnd: newEndStr,
+        deadline: newEndStr // Deadline auto-sync requirement
+      };
+      if (newStartStr && newStartStr !== proj.projectedStart) {
+        updates.projectedStart = newStartStr;
+      }
+      updateProject(proj.id, updates);
+    };
 
     // Group all tasks by parent title
     const groupedForProjectProgress: Record<string, any[]> = {};
@@ -1341,7 +1434,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                   <input
                     type="date"
                     value={proj.projectedStart || ''}
-                    onChange={e => updateProject(proj.id, { projectedStart: e.target.value })}
+                    onChange={e => handleProjectedStartChange(e.target.value)}
                     className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1 text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer [color-scheme:dark]"
                     title="Set Projected Start Date"
                   />
@@ -1358,7 +1451,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                   <input
                     type="date"
                     value={proj.projectedEnd || ''}
-                    onChange={e => updateProject(proj.id, { projectedEnd: e.target.value })}
+                    onChange={e => handleProjectedEndChange(e.target.value)}
                     className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1 text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer [color-scheme:dark]"
                     title="Set Projected End Date"
                   />
