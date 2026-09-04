@@ -1059,23 +1059,6 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
     const approvedTasks = projTasks.filter((t: any) => t.status === TASK_STATUS.PENDING_START).length;
     const totalAssignedDays = projTasks.reduce((s: number, t: any) => s + (t.assignedDays || 0), 0);
 
-<<<<<<< HEAD
-    // Project Dynamic Dates
-    let projectDynamicStart: Date | null = null;
-    let projectDynamicEnd: Date | null = null;
-
-    if (projTasks.length > 0) {
-      projTasks.forEach((t: any) => {
-        const dates = allTaskDates[t.id];
-        if (dates) {
-          if (!projectDynamicStart || dates.start < projectDynamicStart) projectDynamicStart = dates.start;
-          if (!projectDynamicEnd || dates.end > projectDynamicEnd) projectDynamicEnd = dates.end;
-        }
-      });
-    } else {
-      projectDynamicStart = proj.projectedStart ? new Date(proj.projectedStart) : null;
-      projectDynamicEnd = proj.projectedEnd ? new Date(proj.projectedEnd) : null;
-=======
     const projTaskDates = projTasks.map((t: any) => allTaskDates[t.id]).filter(Boolean);
     let projDynStart = projTaskDates.length > 0
       ? new Date(Math.min(...projTaskDates.map((d: any) => d.start.getTime())))
@@ -1087,7 +1070,6 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
     // Enforce date range guard: Dynamic Start <= Dynamic End
     if (projDynStart && projDynEnd && projDynStart.getTime() > projDynEnd.getTime()) {
       projDynEnd = new Date(projDynStart.getTime());
->>>>>>> 55b8c9d17affd0f163ab96a97252e2d0ce26f3e5
     }
 
     const projDynStartStr = projDynStart && !isNaN(projDynStart.getTime())
@@ -1097,24 +1079,6 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
       ? projDynEnd.toISOString().split('T')[0]
       : 'N/A';
 
-<<<<<<< HEAD
-    const handleProjectedStartChange = (newDateStr: string) => {
-      if (!proj.projectedStart) {
-        updateProject(proj.id, { projectedStart: newDateStr });
-        return;
-      }
-      const oldStart = new Date(proj.projectedStart);
-      const newStart = new Date(newDateStr);
-      const diffTime = newStart.getTime() - oldStart.getTime();
-      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-      const updates: any = { projectedStart: newDateStr };
-      if (proj.deadline) {
-        const oldDeadline = new Date(proj.deadline);
-        const newDeadline = new Date(oldDeadline.getTime() + diffDays * (1000 * 60 * 60 * 24));
-        updates.deadline = newDeadline.toISOString().split('T')[0];
-      }
-=======
     const handleProjectedStartChange = (newStartStr: string) => {
       if (!newStartStr) return;
       const newStart = new Date(newStartStr);
@@ -1129,7 +1093,6 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
       let newEndStr = proj.projectedEnd || '';
 
       // Validation: If newStart > projectedEnd or end missing, auto-adjust projectedEnd to maintain duration
->>>>>>> 55b8c9d17affd0f163ab96a97252e2d0ce26f3e5
       if (proj.projectedEnd) {
         const oldEnd = new Date(proj.projectedEnd);
         if (newStart.getTime() >= oldEnd.getTime()) {
