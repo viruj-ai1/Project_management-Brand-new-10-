@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   FolderKanban, ChevronRight, ChevronDown, Clock, ShieldAlert, CheckSquare,
   Send, UserSquare2, Activity, AlertCircle, CheckCircle,
-  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles, Edit2
+  PauseCircle, XCircle, Plus, Search, Users, Trash2, Save, BarChart3, X, AlertTriangle, CheckCircle2, Play, Sparkles
 } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { TASK_STATUS, ROLES, computeDynamicBufferPool, addWorkingDays, isRestDay, getWorkingDaysElapsed } from '../constants';
@@ -807,13 +807,17 @@ export const useAllTaskDates = (tasks: any[], projects: any[]) => {
       const p = projects.find((p: any) => p.id === projectId);
       if (p?.projectedStart) {
         const d = new Date(p.projectedStart);
-        d.setHours(0, 0, 0, 0);
-        return d;
+        if (!isNaN(d.getTime())) {
+          d.setHours(0, 0, 0, 0);
+          return d;
+        }
       }
       if (p?.createdAt) {
         const d = new Date(p.createdAt);
-        d.setHours(0, 0, 0, 0);
-        return d;
+        if (!isNaN(d.getTime())) {
+          d.setHours(0, 0, 0, 0);
+          return d;
+        }
       }
       return new Date(today);
     };
@@ -852,7 +856,7 @@ export const useAllTaskDates = (tasks: any[], projects: any[]) => {
         });
         start = new Date(Math.max(...predEnds.map((d: Date) => d.getTime())));
       } else {
-        start = new Date(today);
+        start = new Date(projStart);
       }
 
       const end = addWorkingDays(start, days);
@@ -894,8 +898,6 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   const [expandedSubtaskId, setExpandedSubtaskId] = useState<string | null>(null);
   const [expandedTaskLogId, setExpandedTaskLogId] = useState<string | null>(null);
   const [editingParentTitle, setEditingParentTitle] = useState<string | null>(null);
-  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
-  const [editProjectNameValue, setEditProjectNameValue] = useState('');
   const [parentTitleEditValue, setParentTitleEditValue] = useState<string>('');
   const [editingNestedSubtaskId, setEditingNestedSubtaskId] = useState<string | null>(null);
   const [subtaskTitleEditValue, setSubtaskTitleEditValue] = useState<string>('');
@@ -1057,6 +1059,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
     const approvedTasks = projTasks.filter((t: any) => t.status === TASK_STATUS.PENDING_START).length;
     const totalAssignedDays = projTasks.reduce((s: number, t: any) => s + (t.assignedDays || 0), 0);
 
+<<<<<<< HEAD
     // Project Dynamic Dates
     let projectDynamicStart: Date | null = null;
     let projectDynamicEnd: Date | null = null;
@@ -1072,10 +1075,29 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
     } else {
       projectDynamicStart = proj.projectedStart ? new Date(proj.projectedStart) : null;
       projectDynamicEnd = proj.projectedEnd ? new Date(proj.projectedEnd) : null;
+=======
+    const projTaskDates = projTasks.map((t: any) => allTaskDates[t.id]).filter(Boolean);
+    let projDynStart = projTaskDates.length > 0
+      ? new Date(Math.min(...projTaskDates.map((d: any) => d.start.getTime())))
+      : (proj.projectedStart ? new Date(proj.projectedStart) : null);
+    let projDynEnd = projTaskDates.length > 0
+      ? new Date(Math.max(...projTaskDates.map((d: any) => d.end.getTime())))
+      : (proj.projectedEnd ? new Date(proj.projectedEnd) : null);
+
+    // Enforce date range guard: Dynamic Start <= Dynamic End
+    if (projDynStart && projDynEnd && projDynStart.getTime() > projDynEnd.getTime()) {
+      projDynEnd = new Date(projDynStart.getTime());
+>>>>>>> 55b8c9d17affd0f163ab96a97252e2d0ce26f3e5
     }
 
-    const formatDate = (d: Date | null) => d ? d.toISOString().split('T')[0] : 'N/A';
+    const projDynStartStr = projDynStart && !isNaN(projDynStart.getTime())
+      ? projDynStart.toISOString().split('T')[0]
+      : 'N/A';
+    const projDynEndStr = projDynEnd && !isNaN(projDynEnd.getTime())
+      ? projDynEnd.toISOString().split('T')[0]
+      : 'N/A';
 
+<<<<<<< HEAD
     const handleProjectedStartChange = (newDateStr: string) => {
       if (!proj.projectedStart) {
         updateProject(proj.id, { projectedStart: newDateStr });
@@ -1092,21 +1114,84 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
         const newDeadline = new Date(oldDeadline.getTime() + diffDays * (1000 * 60 * 60 * 24));
         updates.deadline = newDeadline.toISOString().split('T')[0];
       }
+=======
+    const handleProjectedStartChange = (newStartStr: string) => {
+      if (!newStartStr) return;
+      const newStart = new Date(newStartStr);
+      if (isNaN(newStart.getTime())) return;
+
+      const oldStartStr = proj.projectedStart || (proj.createdAt ? new Date(proj.createdAt).toISOString().split('T')[0] : newStartStr);
+      const oldStart = new Date(oldStartStr);
+
+      const diffMs = newStart.getTime() - oldStart.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+      let newEndStr = proj.projectedEnd || '';
+
+      // Validation: If newStart > projectedEnd or end missing, auto-adjust projectedEnd to maintain duration
+>>>>>>> 55b8c9d17affd0f163ab96a97252e2d0ce26f3e5
       if (proj.projectedEnd) {
-        const oldProjectedEnd = new Date(proj.projectedEnd);
-        const newProjectedEnd = new Date(oldProjectedEnd.getTime() + diffDays * (1000 * 60 * 60 * 24));
-        updates.projectedEnd = newProjectedEnd.toISOString().split('T')[0];
+        const oldEnd = new Date(proj.projectedEnd);
+        if (newStart.getTime() >= oldEnd.getTime()) {
+          const currentDurationMs = oldEnd.getTime() - oldStart.getTime();
+          const durationMs = currentDurationMs > 0 ? currentDurationMs : (24 * 60 * 60 * 1000);
+          const autoEnd = new Date(newStart.getTime() + durationMs);
+          newEndStr = autoEnd.toISOString().split('T')[0];
+        }
+      }
+
+      const updates: any = { projectedStart: newStartStr };
+      if (newEndStr) {
+        updates.projectedEnd = newEndStr;
+        updates.deadline = newEndStr; // Deadline auto-sync
       }
       updateProject(proj.id, updates);
-      alert(`Shifted projected start by ${diffDays} days. Project tasks and deadline have been updated.`);
+
+      // Cascade task date shifts if diffDays !== 0
+      if (diffDays !== 0 && projTasks.length > 0) {
+        projTasks.forEach((task: any) => {
+          const taskUpdates: any = {};
+          if (task.startedAt) {
+            const d = new Date(task.startedAt);
+            d.setDate(d.getDate() + diffDays);
+            taskUpdates.startedAt = d.toISOString();
+          }
+          if (task.completedAt) {
+            const d = new Date(task.completedAt);
+            d.setDate(d.getDate() + diffDays);
+            taskUpdates.completedAt = d.toISOString();
+          }
+          if (Object.keys(taskUpdates).length > 0) {
+            updateTask(task.id, taskUpdates);
+          }
+        });
+      }
     };
 
-    const handleProjectedEndChange = (newDateStr: string) => {
-      if (proj.projectedStart && new Date(newDateStr) < new Date(proj.projectedStart)) {
-        alert("Projected End Date cannot be earlier than Projected Start Date!");
-        return;
+    const handleProjectedEndChange = (newEndStr: string) => {
+      if (!newEndStr) return;
+      const newEnd = new Date(newEndStr);
+      if (isNaN(newEnd.getTime())) return;
+
+      let newStartStr = proj.projectedStart || '';
+
+      // Validation: If newEnd <= projectedStart, auto-adjust projectedStart backward to preserve duration window
+      if (proj.projectedStart) {
+        const oldStart = new Date(proj.projectedStart);
+        if (newEnd.getTime() <= oldStart.getTime()) {
+          const autoStart = new Date(newEnd.getTime() - (24 * 60 * 60 * 1000));
+          newStartStr = autoStart.toISOString().split('T')[0];
+        }
       }
-      updateProject(proj.id, { projectedEnd: newDateStr, deadline: newDateStr });
+
+      const updates: any = {
+        projectedEnd: newEndStr,
+        deadline: newEndStr // Deadline auto-sync requirement
+      };
+      if (newStartStr && newStartStr !== proj.projectedStart) {
+        updates.projectedStart = newStartStr;
+      }
+      updateProject(proj.id, updates);
     };
 
     // Group all tasks by parent title
@@ -1353,62 +1438,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 mb-2">
-              {isEditingProjectName ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={editProjectNameValue}
-                    onChange={(e) => setEditProjectNameValue(e.target.value)}
-                    className="text-3xl font-black tracking-tight bg-white/10 border border-white/30 rounded-lg px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 w-auto min-w-[300px]"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        if (editProjectNameValue.trim()) {
-                          updateProject(proj.id, { name: editProjectNameValue.trim() });
-                        }
-                        setIsEditingProjectName(false);
-                      } else if (e.key === 'Escape') {
-                        setIsEditingProjectName(false);
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => {
-                      if (editProjectNameValue.trim()) {
-                        updateProject(proj.id, { name: editProjectNameValue.trim() });
-                      }
-                      setIsEditingProjectName(false);
-                    }}
-                    className="bg-green-500 hover:bg-green-600 p-1.5 rounded-lg text-white"
-                  >
-                    <CheckSquare className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setIsEditingProjectName(false)}
-                    className="bg-red-500 hover:bg-red-600 p-1.5 rounded-lg text-white"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <h2 className="text-3xl font-black tracking-tight">{proj.name}</h2>
-                  {!readOnly && (
-                    <button
-                      onClick={() => {
-                        setEditProjectNameValue(proj.name);
-                        setIsEditingProjectName(true);
-                      }}
-                      className="text-white/50 hover:text-white transition-colors p-1"
-                      title="Edit Project Name"
-                    >
-                      <Edit2 className="w-5 h-5" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
+            <h2 className="text-3xl font-black mb-2 tracking-tight">{proj.name}</h2>
             {proj.description && <p className="text-blue-200 text-sm max-w-2xl leading-relaxed">{proj.description}</p>}
 
             <div className="flex flex-wrap gap-6 mt-6 text-sm text-blue-200">
@@ -1425,10 +1455,14 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                   </strong>
                 </div>
               )}
-              {/* Projected Start Date */}
+            </div>
+
+            {/* Dates Alignment Grid */}
+            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5 text-sm text-blue-200 max-w-3xl">
+              {/* Row 1, Col 1: Projected Start */}
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4" />
-                <span>Projected Start:</span>
+                <Activity className="w-4 h-4 text-blue-300 shrink-0" />
+                <span className="w-32 shrink-0">Projected Start:</span>
                 {readOnly ? (
                   <strong className="text-white">{proj.projectedStart || 'Not set'}</strong>
                 ) : (
@@ -1436,15 +1470,16 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                     type="date"
                     value={proj.projectedStart || ''}
                     onChange={e => handleProjectedStartChange(e.target.value)}
-                    className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer [color-scheme:dark]"
+                    className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1 text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer [color-scheme:dark]"
                     title="Set Projected Start Date"
                   />
                 )}
               </div>
-              {/* Projected End Date */}
+
+              {/* Row 1, Col 2: Projected End */}
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4" />
-                <span>Projected End:</span>
+                <Activity className="w-4 h-4 text-blue-300 shrink-0" />
+                <span className="w-32 shrink-0">Projected End:</span>
                 {readOnly ? (
                   <strong className="text-white">{proj.projectedEnd || 'Not set'}</strong>
                 ) : (
@@ -1452,21 +1487,24 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                     type="date"
                     value={proj.projectedEnd || ''}
                     onChange={e => handleProjectedEndChange(e.target.value)}
-                    className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer [color-scheme:dark]"
+                    className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1 text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer [color-scheme:dark]"
                     title="Set Projected End Date"
                   />
                 )}
               </div>
-              {/* Dynamic Dates */}
+
+              {/* Row 2, Col 1: Dynamic Start */}
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-amber-300" />
-                <span>Dynamic Start:</span>
-                <strong className="text-white">{formatDate(projectDynamicStart)}</strong>
+                <Activity className="w-4 h-4 text-blue-300 shrink-0" />
+                <span className="w-32 shrink-0">Dynamic Start:</span>
+                <strong className="text-white font-mono text-xs bg-white/10 px-2.5 py-1 rounded-lg border border-white/10">{projDynStartStr}</strong>
               </div>
+
+              {/* Row 2, Col 2: Dynamic End */}
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-amber-300" />
-                <span>Dynamic End:</span>
-                <strong className="text-white">{formatDate(projectDynamicEnd)}</strong>
+                <Activity className="w-4 h-4 text-blue-300 shrink-0" />
+                <span className="w-32 shrink-0">Dynamic End:</span>
+                <strong className="text-white font-mono text-xs bg-white/10 px-2.5 py-1 rounded-lg border border-white/10">{projDynEndStr}</strong>
               </div>
             </div>
           </div>

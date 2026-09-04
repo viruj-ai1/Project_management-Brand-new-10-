@@ -1,8 +1,15 @@
 import os
 import json
+import sys
+from pathlib import Path
 import psycopg2
 from psycopg2.pool import ThreadedConnectionPool
 from contextlib import contextmanager
+
+# Ensure root directory is in sys.path for db_adapter import
+root_dir = str(Path(__file__).resolve().parent.parent.parent)
+if root_dir not in sys.path:
+    sys.path.insert(0, root_dir)
 
 DATABASE_URL = os.environ.get("SUPABASE_URL") or os.environ.get("DATABASE_URL")
 
@@ -83,6 +90,11 @@ def fetch_one(query: str, params=None):
     except Exception as e:
         print(f"fetch_one DB error: {e}. Falling back.")
         rows = fetch_all(query, params)
+        if params and "users" in query.lower():
+            target = str(params[0]).strip().lower()
+            for r in rows:
+                if str(r.get("id", "")).strip().lower() == target or str(r.get("name", "")).lower().replace(" ", "_") == target:
+                    return r
         return rows[0] if rows else None
 
 def execute_query(query: str, params=None, returning=False):

@@ -88,7 +88,7 @@ export const AIInsights = () => {
     const fetchInsights = async () => {
       setIsLoading(true);
       try {
-        const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+        const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const apiBase = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
         const response = await fetch(`${apiBase}/ai-insights`, {
           method: 'POST',
@@ -158,7 +158,7 @@ export const AIInsights = () => {
     setIsChatLoading(true);
 
     try {
-      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const apiBase = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
       const response = await fetch(`${apiBase}/ai-chat`, {
         method: 'POST',
@@ -389,7 +389,8 @@ export const AIInsights = () => {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               placeholder="Ask anything about your projects, delays, or critical chains..."
-              className="flex-1 p-3 px-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm font-medium"
+              className="viruj-ai-input flex-1 p-3 px-4 bg-white border border-gray-300 text-black focus:text-black focus:bg-white font-bold rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm shadow-sm"
+              style={{ color: '#000000', WebkitTextFillColor: '#000000', backgroundColor: '#ffffff', opacity: 1, caretColor: '#000000' }}
               disabled={isChatLoading}
             />
             <button
