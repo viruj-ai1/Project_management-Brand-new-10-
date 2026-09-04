@@ -477,6 +477,9 @@ async def update_project(project_id: str, update: ProjectUpdate):
         "projectedStart": "projected_start",
         "projectedEnd": "projected_end"
     }
+    if "projectedEnd" in updates and updates["projectedEnd"]:
+        updates["deadline"] = updates["projectedEnd"]
+        
     for k, v in updates.items():
         db_key = key_mapping.get(k, k)
         set_clauses.append(f"{db_key} = %s")

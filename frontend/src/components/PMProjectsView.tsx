@@ -17,9 +17,6 @@ const PROJECT_STATUS_CONFIG: Record<string, { color: string; bg: string; border:
   Suspended: { color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', icon: PauseCircle },
   Dismissed: { color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', icon: XCircle },
 };
-
-
-
 const fmtDate = (d: Date) => {
   if (!d || isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
@@ -798,6 +795,7 @@ export const ReportsTab = ({ projTasks, proj, users, allTaskDates, isClientView 
 };
 
 import { computeCriticalChain } from '../utils/criticalChain';
+import { features } from 'process';
 
 export const useAllTaskDates = (tasks: any[], projects: any[]) => {
   return useMemo(() => {
@@ -921,7 +919,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
   const handleNestedSubtaskTitleSave = (task: any) => {
     const newTitle = subtaskTitleEditValue.trim();
     if (newTitle && editingNestedSubtaskId) {
-      const newSubtasks = (task.subtasks || []).map((st: any) => 
+      const newSubtasks = (task.subtasks || []).map((st: any) =>
         st.id === editingNestedSubtaskId ? { ...st, title: newTitle } : st
       );
       updateTask(task.id, { subtasks: newSubtasks });
@@ -1062,7 +1060,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
     // Project Dynamic Dates
     let projectDynamicStart: Date | null = null;
     let projectDynamicEnd: Date | null = null;
-    
+
     if (projTasks.length > 0) {
       projTasks.forEach((t: any) => {
         const dates = allTaskDates[t.id];
@@ -1071,6 +1069,9 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
           if (!projectDynamicEnd || dates.end > projectDynamicEnd) projectDynamicEnd = dates.end;
         }
       });
+    } else {
+      projectDynamicStart = proj.projectedStart ? new Date(proj.projectedStart) : null;
+      projectDynamicEnd = proj.projectedEnd ? new Date(proj.projectedEnd) : null;
     }
 
     const formatDate = (d: Date | null) => d ? d.toISOString().split('T')[0] : 'N/A';
@@ -1084,7 +1085,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
       const newStart = new Date(newDateStr);
       const diffTime = newStart.getTime() - oldStart.getTime();
       const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-      
+
       const updates: any = { projectedStart: newDateStr };
       if (proj.deadline) {
         const oldDeadline = new Date(proj.deadline);
@@ -1886,8 +1887,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                           type="submit"
                           disabled={isDisabled}
                           className={`w-full px-4 py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all ${isDisabled
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : 'bg-[#1e3a5f] text-white hover:bg-[#162d4a] shadow-sm hover:shadow-md transition-shadow shadow-blue-500/20'
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#1e3a5f] text-white hover:bg-[#162d4a] shadow-sm hover:shadow-md transition-shadow shadow-blue-500/20'
                             }`}
                         >
                           <Send className="w-4 h-4" /> Delegate Tasks & Subtasks
@@ -2046,7 +2047,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                   className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-blue-600 transition-all rounded-full hover:bg-blue-50 ml-1"
                                   title="Edit Task Heading"
                                 >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
                                 </button>
                               )}
                             </h4>
@@ -2119,9 +2120,9 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                       {displayTitle}
                                     </span>
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${task.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                        task.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                                          task.status === 'Delayed' ? 'bg-red-100 text-red-700' :
-                                            'bg-gray-100 text-gray-500'
+                                      task.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                                        task.status === 'Delayed' ? 'bg-red-100 text-red-700' :
+                                          'bg-gray-100 text-gray-500'
                                       }`}>
                                       {task.status === 'Completed' ? <CheckCircle2 className="w-2.5 h-2.5 inline mr-1" /> : task.status === 'Delayed' ? <AlertCircle className="w-2.5 h-2.5 inline mr-1" /> : <Activity className="w-2.5 h-2.5 inline mr-1" />}
                                       {task.status}
@@ -2132,8 +2133,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                       </span>
                                     )}
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm ${chainStatus === 'Critical'
-                                        ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                       }`}>
                                       {chainStatus === 'Critical' ? 'Critical Chain' : 'Feeding Chain'}
                                     </span>
@@ -2185,7 +2186,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                                     className="opacity-0 group-hover/st:opacity-100 text-gray-400 hover:text-blue-600 transition-opacity"
                                                     title="Edit Subtask"
                                                   >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
                                                   </button>
                                                 </div>
                                               )}
@@ -2453,8 +2454,8 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                                         }`}
                                                     >
                                                       <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 ${isDone
-                                                          ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                          : 'bg-white border-gray-300 text-gray-400'
+                                                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                                                        : 'bg-white border-gray-300 text-gray-400'
                                                         }`}>
                                                         {isDone ? '✓' : dayIdx + 1}
                                                       </div>
@@ -2501,7 +2502,7 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
 
                                           const stCompleted = st.completed;
                                           const stStatus = stCompleted ? 'Completed' : (st.startedAt ? 'In Progress' : 'Pending Start');
-                                          
+
                                           const isUnblocked = (() => {
                                             if (stCompleted) return true;
                                             if (!st.predecessors || st.predecessors.length === 0) return true;
@@ -2534,13 +2535,13 @@ export const PMProjectsView = ({ initialProjectId = null, onBack = null }: { ini
                                                       {st.title || 'Untitled Subtask'}
                                                     </span>
                                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stStatusBg}`}>
-                                                       <Activity className="w-2.5 h-2.5 inline mr-1" />{stStatus}
-                                                     </span>
-                                                     {!isUnblocked && !stCompleted && (
-                                                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                                                         Blocked
-                                                       </span>
-                                                     )}
+                                                      <Activity className="w-2.5 h-2.5 inline mr-1" />{stStatus}
+                                                    </span>
+                                                    {!isUnblocked && !stCompleted && (
+                                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                                        Blocked
+                                                      </span>
+                                                    )}
                                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200 shadow-sm">
                                                       Subtask
                                                     </span>
@@ -3451,7 +3452,7 @@ const RMListTab = ({ proj, updateProject }: { proj: any, updateProject: any }) =
           </button>
         </div>
       </div>
-      
+
       <div className="space-y-6">
         {stages.map((stage, stageIndex) => (
           <div key={stage.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
